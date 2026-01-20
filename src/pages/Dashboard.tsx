@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Quote, ensureDbOpen, logDexieError } from '../db';
+import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
 import { FileText, Database, TrendingUp, ArrowUpRight, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -9,11 +9,14 @@ export const Dashboard: React.FC = () => {
   const stats = useLiveQuery(async () => {
     try {
       await ensureDbOpen();
-      const quotesCount = await db.quotes.count();
+      const uid = getCurrentUserId();
+      const quotes = await db.quotes.where('ownerUserId').equals(uid || -1).toArray();
+      const quotesCount = quotes.length;
       const articlesCount = await db.articles.count();
-      const quotes = await db.quotes.toArray();
       const totalValue = quotes.reduce((acc, q) => acc + q.total, 0);
-      const recentQuotes = await db.quotes.orderBy('createdAt').reverse().limit(5).toArray();
+      const recentQuotes = quotes
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
       
       return { quotesCount, articlesCount, totalValue, recentQuotes };
     } catch (error) {

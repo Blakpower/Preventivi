@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Settings, ensureDbOpen, logDexieError } from '../db';
+import { db, type Settings, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
 import { Save, Building2, FileText, Wallet } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const settings = useLiveQuery(async () => {
     try {
       await ensureDbOpen();
-      const rows = await db.settings.toArray();
-      return rows[0];
+      const uid = getCurrentUserId();
+      if (!uid) return undefined;
+      const row = await db.settings.where('userId').equals(uid).first();
+      return row;
     } catch (error) {
       logDexieError('Dexie settings query failed:', error);
       return undefined;
@@ -40,10 +42,14 @@ export const SettingsPage: React.FC = () => {
 
   const onSubmit = async (data: Settings) => {
     try {
+      const uid = getCurrentUserId();
+      if (!uid) return;
       if (settings && settings.id) {
-        await db.settings.update(settings.id, data);
-        // Optional: show a toast or nicer alert
+        await db.settings.update(settings.id, { ...data, userId: uid });
         alert('Impostazioni salvate con successo!');
+      } else {
+        await db.settings.add({ ...data, userId: uid });
+        alert('Impostazioni create con successo!');
       }
     } catch (error) {
       console.error("Error saving settings:", error);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
-import { db, type Quote, ensureDbOpen, logDexieError } from '../db';
+import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
 import { Plus, Search, Trash2, Download, FileText, Calendar, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
@@ -12,8 +12,9 @@ export const Quotes: React.FC = () => {
   const settings = useLiveQuery(async () => {
     try {
       await ensureDbOpen();
-      const rows = await db.settings.toArray();
-      return rows[0];
+      const uid = getCurrentUserId();
+      if (!uid) return undefined;
+      return await db.settings.where('userId').equals(uid).first();
     } catch (error) {
       logDexieError('Dexie settings query failed:', error);
       return undefined;
@@ -23,15 +24,15 @@ export const Quotes: React.FC = () => {
   const quotes = useLiveQuery(async () => {
     try {
       await ensureDbOpen();
-      const collection = db.quotes.orderBy('createdAt').reverse();
+      const uid = getCurrentUserId();
+      const collection = db.quotes.where('ownerUserId').equals(uid || -1).reverse();
     
       if (search) {
-        return await collection
-          .filter(q => 
-            q.customerName.toLowerCase().includes(search.toLowerCase()) || 
-            q.number.toLowerCase().includes(search.toLowerCase())
-          )
-          .toArray();
+        const all = await collection.toArray();
+        return all.filter(q => 
+          q.customerName.toLowerCase().includes(search.toLowerCase()) || 
+          q.number.toLowerCase().includes(search.toLowerCase())
+        );
       }
       return await collection.toArray();
     } catch (error) {

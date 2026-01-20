@@ -250,14 +250,47 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       </Text>
     </Page>
     
-    {/* Attachments: product photos and descriptions */}
-    {(quote.attachments || []).map((att, idx) => (
-      <Page key={`att-${idx}`} size="A4" style={styles.attachmentPage}>
-        {att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
-        {att.imageData && <Image style={styles.attachmentImage} src={att.imageData} />}
-        {att.description && <Text style={styles.attachmentText}>{att.description}</Text>}
-      </Page>
-    ))}
+    {/* Attachments with customizable layout */}
+    {(quote.attachments || []).map((att, idx) => {
+      const layout = att.layout || {};
+      const pos = layout.imagePosition || 'top';
+      const imgH = layout.imageHeight || 300;
+      const descSize = layout.descriptionFontSize || 11;
+      const descColor = layout.descriptionColor || '#333';
+      const showTitle = layout.showTitle !== false;
+
+      const imageEl = att.imageData ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData} /> : null;
+      const descEl = att.description ? <Text style={[styles.attachmentText, { fontSize: descSize, color: descColor }]}>{att.description}</Text> : null;
+
+      return (
+        <Page key={`att-${idx}`} size="A4" style={styles.attachmentPage}>
+          {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
+          {pos === 'left' || pos === 'right' ? (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {pos === 'left' && (
+                <View style={{ width: '50%' }}>
+                  {imageEl}
+                </View>
+              )}
+              <View style={{ width: '50%' }}>
+                {descEl}
+              </View>
+              {pos === 'right' && (
+                <View style={{ width: '50%' }}>
+                  {imageEl}
+                </View>
+              )}
+            </View>
+          ) : (
+            <>
+              {pos === 'top' && imageEl}
+              {descEl}
+              {pos === 'bottom' && imageEl}
+            </>
+          )}
+        </Page>
+      );
+    })}
 
     {/* Contract Pages at end */}
     {contractPages.map((pageText, idx) => (

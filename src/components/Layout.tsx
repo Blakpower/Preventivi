@@ -2,15 +2,25 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, Database, Settings, PlusCircle, Menu, Bell } from 'lucide-react';
 import clsx from 'clsx';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, getCurrentUserId, setCurrentUserId, type User } from '../db';
+import { useNavigate } from 'react-router-dom';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const uid = getCurrentUserId();
+  const currentUser = useLiveQuery(async () => {
+    if (!uid) return undefined;
+    return await db.table<User>('users').get(uid);
+  }, [uid]);
 
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/quotes', label: 'Preventivi', icon: FileText },
     { path: '/articles', label: 'Articoli', icon: Database },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
+    { path: '/users', label: 'Utenti', icon: Settings },
   ];
 
   return (
@@ -80,9 +90,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </button>
             <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm border border-blue-200">
-                A
+                {currentUser?.displayName?.[0]?.toUpperCase() || 'U'}
               </div>
-              <span className="text-sm font-medium text-slate-600">Admin User</span>
+              <span className="text-sm font-medium text-slate-600">{currentUser?.displayName || 'Utente'}</span>
+              <button
+                onClick={() => { setCurrentUserId(null); navigate('/login'); }}
+                className="ml-4 px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+              >
+                Esci
+              </button>
             </div>
           </div>
         </header>

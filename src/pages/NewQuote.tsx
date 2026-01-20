@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Quote, ensureDbOpen, logDexieError } from '../db';
+import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
 import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
@@ -13,8 +13,10 @@ export const NewQuote: React.FC = () => {
   const settings = useLiveQuery(async () => {
     try {
       await ensureDbOpen();
-      const rows = await db.settings.toArray();
-      return rows[0];
+      const uid = getCurrentUserId();
+      if (!uid) return undefined;
+      const row = await db.settings.where('userId').equals(uid).first();
+      return row;
     } catch (error) {
       logDexieError('Dexie settings query failed:', error);
       return undefined;
@@ -46,7 +48,7 @@ export const NewQuote: React.FC = () => {
     control,
     name: 'items'
   });
-  const { fields: attachFields, append: attachAppend, remove: attachRemove } = useFieldArray({
+  const { fields: attachFields, append: attachAppend, remove: attachRemove, move: attachMove } = useFieldArray({
     control,
     name: 'attachments'
   });
@@ -118,6 +120,7 @@ export const NewQuote: React.FC = () => {
       await db.quotes.add({
         ...data,
         number: numberValue,
+        ownerUserId: getCurrentUserId() || undefined,
         createdAt: new Date()
       });
 
@@ -437,7 +440,20 @@ export const NewQuote: React.FC = () => {
             <h2 className="text-lg font-bold text-slate-800">Allegati PDF (foto e descrizioni)</h2>
             <button
               type="button"
-              onClick={() => attachAppend({ title: `Pagina ${attachFields.length + 1}`, description: `Descrizione ${attachFields.length + 1}`, imageData: '' })}
+              onClick={() =>
+                attachAppend({
+                  title: `Pagina ${attachFields.length + 1}`,
+                  description: `Descrizione ${attachFields.length + 1}`,
+                  imageData: '',
+                  layout: {
+                    imagePosition: 'top',
+                    imageHeight: 300,
+                    descriptionFontSize: 11,
+                    descriptionColor: '#333333',
+                    showTitle: true
+                  }
+                })
+              }
               className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold flex items-center space-x-1"
             >
               <Plus size={18} />
@@ -476,7 +492,73 @@ export const NewQuote: React.FC = () => {
                     placeholder="Dettagli, caratteristiche, garanzie, etc."
                   />
                 </div>
-                <div className="md:col-span-3 flex justify-end">
+                <div className="md:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Posizione immagine</label>
+                    <select
+                      {...register(`attachments.${index}.layout.imagePosition` as const)}
+                      className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    >
+                      <option value="top">Sopra</option>
+                      <option value="bottom">Sotto</option>
+                      <option value="left">Sinistra</option>
+                      <option value="right">Destra</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagine (px)</label>
+                    <input
+                      type="number"
+                      {...register(`attachments.${index}.layout.imageHeight` as const, { valueAsNumber: true })}
+                      className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                      placeholder="300"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Dimensione testo descrizione</label>
+                    <input
+                      type="number"
+                      {...register(`attachments.${index}.layout.descriptionFontSize` as const, { valueAsNumber: true })}
+                      className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                      placeholder="11"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Colore descrizione</label>
+                    <input
+                      type="color"
+                      {...register(`attachments.${index}.layout.descriptionColor` as const)}
+                      className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    />
+                  </div>
+                  <div className="md:col-span-4 flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      {...register(`attachments.${index}.layout.showTitle` as const)}
+                      className="rounded border-slate-300"
+                    />
+                    <span className="text-sm text-slate-700">Mostra titolo in PDF</span>
+                  </div>
+                </div>
+                <div className="md:col-span-3 flex justify-between">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => index > 0 && attachMove(index, index - 1)}
+                      className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm border border-slate-200"
+                      disabled={index === 0}
+                    >
+                      Su
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => index < attachFields.length - 1 && attachMove(index, index + 1)}
+                      className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm border border-slate-200"
+                      disabled={index === attachFields.length - 1}
+                    >
+                      Giù
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => attachRemove(index)}
