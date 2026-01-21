@@ -39,6 +39,26 @@ export const SettingsPage: React.FC = () => {
     const dataUrl = await toBase64(file);
     setValue('logoData', dataUrl, { shouldDirty: true });
   };
+  const onDefaultHardwareChange = async (file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    setValue('defaultHardwareImage', dataUrl, { shouldDirty: true });
+  };
+  const onDefaultSoftwareChange = async (file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    setValue('defaultSoftwareImage', dataUrl, { shouldDirty: true });
+  };
+  const onDefaultTargetChange = async (file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    setValue('defaultTargetImage', dataUrl, { shouldDirty: true });
+  };
+  const onDefaultDescrizioneChange = async (file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    setValue('defaultDescrizioneImage', dataUrl, { shouldDirty: true });
+  };
 
   const onSubmit = async (data: Settings) => {
     try {
@@ -236,6 +256,105 @@ export const SettingsPage: React.FC = () => {
                 {...register('defaultVat', { valueAsNumber: true })}
                 className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
               />
+            </div>
+          </div>
+          <div className="mt-8">
+            <h3 className="text-sm font-bold text-slate-800 mb-3">Immagini di default per i preventivi</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Hardware (immagine default)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onDefaultHardwareChange(e.target.files?.[0])}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                />
+                <input type="hidden" {...register('defaultHardwareImage')} />
+                {watch('defaultHardwareImage') && (
+                  <img src={watch('defaultHardwareImage')} alt="Hardware default" className="mt-2 h-24 object-contain border rounded-lg" />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Software (immagine default)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onDefaultSoftwareChange(e.target.files?.[0])}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                />
+                <input type="hidden" {...register('defaultSoftwareImage')} />
+                {watch('defaultSoftwareImage') && (
+                  <img src={watch('defaultSoftwareImage')} alt="Software default" className="mt-2 h-24 object-contain border rounded-lg" />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo (immagine default)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onDefaultTargetChange(e.target.files?.[0])}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                />
+                <input type="hidden" {...register('defaultTargetImage')} />
+                {watch('defaultTargetImage') && (
+                  <img src={watch('defaultTargetImage')} alt="Target default" className="mt-2 h-24 object-contain border rounded-lg" />
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Descrizione Prodotti (prima immagine default)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => onDefaultDescrizioneChange(e.target.files?.[0])}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                />
+                <input type="hidden" {...register('defaultDescrizioneImage')} />
+                {watch('defaultDescrizioneImage') && (
+                  <img src={watch('defaultDescrizioneImage')} alt="Descrizione default" className="mt-2 h-24 object-contain border rounded-lg" />
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">Queste immagini saranno pre-caricate automaticamente nei nuovi preventivi.</p>
+          </div>
+          <div className="mt-8">
+            <h3 className="text-sm font-bold text-slate-800 mb-3">Dimensioni immagini PDF (px)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza Hardware</label>
+                <input
+                  type="number"
+                  {...register('defaultHardwareHeight', { valueAsNumber: true })}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                  placeholder="380"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza Software</label>
+                <input
+                  type="number"
+                  {...register('defaultSoftwareHeight', { valueAsNumber: true })}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                  placeholder="180"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza A chi ci rivolgiamo</label>
+                <input
+                  type="number"
+                  {...register('defaultTargetHeight', { valueAsNumber: true })}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                  placeholder="180"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza prima immagine Descrizione Prodotti</label>
+                <input
+                  type="number"
+                  {...register('defaultDescrizioneFirstHeight', { valueAsNumber: true })}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                  placeholder="300"
+                />
+              </div>
             </div>
           </div>
         </div>

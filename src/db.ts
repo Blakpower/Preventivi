@@ -66,6 +66,7 @@ export interface Quote {
   descrizioneProdottiText?: string;
   descrizioneProdottiImages?: string[];
   descrizioneProdottiImageCount?: number;
+  descrizioneProdottiImageFit?: 'contain' | 'cover';
   conditionsList?: string[];
   conditionsCount?: number;
   subtotal: number;
@@ -90,6 +91,14 @@ export interface Settings {
   bankInfo: string;
   logoUrl?: string;
   logoData?: string;
+  defaultHardwareImage?: string;
+  defaultSoftwareImage?: string;
+  defaultTargetImage?: string;
+  defaultDescrizioneImage?: string;
+  defaultHardwareHeight?: number;
+  defaultSoftwareHeight?: number;
+  defaultTargetHeight?: number;
+  defaultDescrizioneFirstHeight?: number;
   contractPagesText?: string;
   nextQuoteNumber: number;
   quoteNumberPrefix: string; // e.g., "2024-"

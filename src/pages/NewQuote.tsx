@@ -43,7 +43,7 @@ export const NewQuote: React.FC = () => {
       premessaText: 'La Esse Group SRL è un’Azienda formata da elementi con pluriennale esperienza nel settore Retail, e promuove la vendita di qualificati marchi, sia hardware che software, tra i quali:',
       premessaHardwareImages: [],
       premessaHardwareImageCount: 0,
-      softwareText: '',
+      softwareText: "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi.",
       softwareImages: [],
       softwareImageCount: 0,
       targetAudienceImages: [],
@@ -51,6 +51,7 @@ export const NewQuote: React.FC = () => {
       descrizioneProdottiText: '',
       descrizioneProdottiImages: [],
       descrizioneProdottiImageCount: 0,
+      descrizioneProdottiImageFit: 'contain',
       conditionsList: [],
       conditionsCount: 0,
       subtotal: 0,
@@ -76,6 +77,27 @@ export const NewQuote: React.FC = () => {
       setValue('number', `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`);
       if (settings.attachmentsDefaults?.position) {
         setValue('attachmentsPosition', settings.attachmentsDefaults.position);
+      }
+      // Precarica immagini di default se presenti e se non già impostate da last-quote
+      const hwArr = getValues('premessaHardwareImages') || [];
+      if (settings.defaultHardwareImage && (!hwArr || hwArr.length === 0 || !hwArr[0])) {
+        setValue('premessaHardwareImages', [settings.defaultHardwareImage], { shouldDirty: true });
+        if (!getValues('premessaHardwareImageCount')) setValue('premessaHardwareImageCount', 1, { shouldDirty: true });
+      }
+      const swArr = getValues('softwareImages') || [];
+      if (settings.defaultSoftwareImage && (!swArr || swArr.length === 0 || !swArr[0])) {
+        setValue('softwareImages', [settings.defaultSoftwareImage], { shouldDirty: true });
+        if (!getValues('softwareImageCount')) setValue('softwareImageCount', 1, { shouldDirty: true });
+      }
+      const audArr = getValues('targetAudienceImages') || [];
+      if (settings.defaultTargetImage && (!audArr || audArr.length === 0 || !audArr[0])) {
+        setValue('targetAudienceImages', [settings.defaultTargetImage], { shouldDirty: true });
+        if (!getValues('targetAudienceImageCount')) setValue('targetAudienceImageCount', 1, { shouldDirty: true });
+      }
+      const descArr = getValues('descrizioneProdottiImages') || [];
+      if (settings.defaultDescrizioneImage && (!descArr || descArr.length === 0 || !descArr[0])) {
+        setValue('descrizioneProdottiImages', [settings.defaultDescrizioneImage], { shouldDirty: true });
+        if (!getValues('descrizioneProdottiImageCount')) setValue('descrizioneProdottiImageCount', 1, { shouldDirty: true });
       }
     }
   }, [settings, setValue, getValues]);
@@ -248,6 +270,7 @@ export const NewQuote: React.FC = () => {
         if (last.descrizioneProdottiText) setValue('descrizioneProdottiText', last.descrizioneProdottiText);
         if (last.descrizioneProdottiImages) setValue('descrizioneProdottiImages', last.descrizioneProdottiImages);
         if (last.descrizioneProdottiImageCount) setValue('descrizioneProdottiImageCount', last.descrizioneProdottiImageCount);
+        if (last.descrizioneProdottiImageFit) setValue('descrizioneProdottiImageFit', last.descrizioneProdottiImageFit);
         if (last.conditionsList) setValue('conditionsList', last.conditionsList);
         if (last.conditionsCount) setValue('conditionsCount', last.conditionsCount);
       } catch (e) {
@@ -455,6 +478,7 @@ export const NewQuote: React.FC = () => {
                           descrizioneProdottiText: getValues('descrizioneProdottiText') || '',
                           descrizioneProdottiImages: getValues('descrizioneProdottiImages') || [],
                           descrizioneProdottiImageCount: getValues('descrizioneProdottiImageCount') || 0,
+                          descrizioneProdottiImageFit: getValues('descrizioneProdottiImageFit') || 'contain',
                           conditionsList: getValues('conditionsList') || [],
                           conditionsCount: getValues('conditionsCount') || 0,
                           subtotal: getValues('subtotal') || 0,
@@ -822,6 +846,16 @@ export const NewQuote: React.FC = () => {
                     ))}
                   </select>
                   <span className="text-xs text-slate-500">Numero pagine immagini a piena pagina</span>
+                </div>
+                <div className="mt-3 flex items-center space-x-3">
+                  <label className="block text-sm font-semibold text-slate-700">Adattamento immagine</label>
+                  <select
+                    {...register('descrizioneProdottiImageFit' as const)}
+                    className="w-44 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    <option value="contain">Adatta alla pagina (consigliato)</option>
+                    <option value="cover">Riempi la pagina (può tagliare)</option>
+                  </select>
                 </div>
                 {descrizioneCount > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">

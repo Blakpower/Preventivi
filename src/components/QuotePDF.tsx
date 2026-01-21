@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
   },
   attachmentPage: {
-    padding: 40,
+    padding: 30,
     fontSize: 11,
     color: '#333',
   },
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fullImagePage: {
-    padding: 40,
+    padding: 0,
   },
   fullImage: {
     width: '100%',
@@ -285,135 +285,71 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       <View style={{ marginTop: 12 }}>
         <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
         {(() => {
-          const imgs = (quote.premessaHardwareImages || []).filter(Boolean);
-          const cols = 3;
-          const rows = Math.ceil(imgs.length / cols);
-          const renderedRows: React.ReactElement[] = [];
-          for (let r = 0; r < rows; r++) {
-            const slice = imgs.slice(r * cols, (r + 1) * cols);
-            renderedRows.push(
-              <View key={`hw-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                {slice.map((img, i) => (
-                  <View key={`hw-${r}-${i}`} style={{ flex: 1 }}>
-                    {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-                  </View>
-                ))}
-              </View>
-            );
-          }
-          return renderedRows;
+          const firstHw = (quote.premessaHardwareImages || []).filter(Boolean)[0];
+          return firstHw ? (
+            <Image style={{ width: '100%', height: settings.defaultHardwareHeight ?? 380, objectFit: 'contain' }} src={firstHw} />
+          ) : null;
         })()}
       </View>
-      {/* Software continuation */}
-      <Text style={[styles.attachmentTitle, { marginTop: 16, textAlign: 'center' }]}>Software</Text>
-      {quote.softwareText && <Text style={styles.attachmentText}>{quote.softwareText}</Text>}
-      <View style={{ marginTop: 12 }}>
+    </Page>
+    {/* Pagina Software + descrizione + Target Audience (stessa pagina, adattamento automatico) */}
+    <Page size="A4" style={styles.attachmentPage}>
+      {renderHeader()}
+      <View style={{ flexGrow: 1 }}>
+        <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Software</Text>
         {(() => {
-          const imgs = (quote.softwareImages || []).filter(Boolean);
-          const cols = 3;
-          const rows = Math.ceil(imgs.length / cols);
-          const renderedRows: React.ReactElement[] = [];
-          for (let r = 0; r < rows; r++) {
-            const slice = imgs.slice(r * cols, (r + 1) * cols);
-            renderedRows.push(
-              <View key={`sw-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                {slice.map((img, i) => (
-                  <View key={`sw-${r}-${i}`} style={{ flex: 1 }}>
-                    {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-                  </View>
-                ))}
+          const firstSw = (quote.softwareImages || []).filter(Boolean)[0];
+          return firstSw ? (
+            <View style={{ height: settings.defaultSoftwareHeight ?? 180, marginBottom: 6 }}>
+              <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={firstSw} />
+            </View>
+          ) : null;
+        })()}
+        <Text style={[styles.attachmentText, { marginTop: 6, fontSize: 10, lineHeight: 1.35 }]}>
+          {quote.softwareText || "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi."}
+        </Text>
+        {(() => {
+          const firstAud = (quote.targetAudienceImages || []).filter(Boolean)[0];
+          return firstAud ? (
+            <>
+              <Text style={[styles.attachmentTitle, { marginTop: 10, textAlign: 'center' }]}>A chi ci rivolgiamo</Text>
+              <View style={{ height: settings.defaultTargetHeight ?? 180, marginTop: 6 }}>
+                <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={firstAud} />
               </View>
-            );
-          }
-          return renderedRows;
+            </>
+          ) : null;
         })()}
       </View>
-      {/* Target Audience */}
-      {(quote.targetAudienceImages && quote.targetAudienceImages.length > 0) && (
-        <>
-          <Text style={[styles.attachmentTitle, { marginTop: 16, textAlign: 'center' }]}>A chi ci rivolgiamo</Text>
-          <View style={{ marginTop: 12 }}>
-            {(() => {
-              const imgs = (quote.targetAudienceImages || []).filter(Boolean);
-              const cols = 5;
-              const rows = Math.ceil(imgs.length / cols);
-              const renderedRows: React.ReactElement[] = [];
-              for (let r = 0; r < rows; r++) {
-                const slice = imgs.slice(r * cols, (r + 1) * cols);
-                renderedRows.push(
-                  <View key={`aud-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                    {slice.map((img, i) => (
-                      <View key={`aud-${r}-${i}`} style={{ flex: 1 }}>
-                        {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
-                      </View>
-                    ))}
-                  </View>
-                );
-              }
-              return renderedRows;
-            })()}
-          </View>
-        </>
-      )}
     </Page>
 
-    {/* Page 2 - Descrizione Prodotti con immagini nella stessa sezione */}
+    {/* Sezione 2 - Descrizione Prodotti con prima immagine nella stessa pagina */}
     {(() => {
       const imgs = (quote.descrizioneProdottiImages || []).filter(Boolean);
-      const perPage = 6;
       const pages: React.ReactElement[] = [];
-      const firstChunk = imgs.slice(0, perPage);
+      // Intro page with section title, text and first image filling the remaining area (senza crop)
       pages.push(
-        <Page key="desc-prod-0" size="A4" style={styles.attachmentPage} id="descrizione">
+        <Page key="desc-prod-intro" size="A4" style={styles.attachmentPage} id="descrizione">
           {renderHeader()}
           <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
           {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
-          {firstChunk.length > 0 && (
-            <View style={{ marginTop: 12 }}>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                {firstChunk.slice(0, 3).map((img, i) => (
-                  <View key={`desc-prod-top-${i}`} style={{ flex: 1 }}>
-                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
-                  </View>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {firstChunk.slice(3, 6).map((img, i) => (
-                  <View key={`desc-prod-bottom-${i}`} style={{ flex: 1 }}>
-                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
-                  </View>
-                ))}
-              </View>
+          {imgs[0] && (
+            <View style={{ height: settings.defaultDescrizioneFirstHeight ?? 300, marginTop: 10 }}>
+              <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={imgs[0]!} />
             </View>
           )}
         </Page>
       );
-      const remaining = imgs.slice(perPage);
-      for (let offset = 0; offset < remaining.length; offset += perPage) {
-        const chunk = remaining.slice(offset, offset + perPage);
+      // Full-page image pages for remaining images
+      imgs.slice(1).forEach((img, idx) => {
         pages.push(
-          <Page key={`desc-prod-${offset + perPage}`} size="A4" style={styles.attachmentPage}>
+          <Page key={`desc-prod-full-${idx}`} size="A4" style={styles.fullImagePage}>
             {renderHeader()}
-            <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
-            <View style={{ marginTop: 12 }}>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-                {chunk.slice(0, 3).map((img, i) => (
-                  <View key={`desc-prod-top-${offset + i}`} style={{ flex: 1 }}>
-                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
-                  </View>
-                ))}
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {chunk.slice(3, 6).map((img, i) => (
-                  <View key={`desc-prod-bottom-${offset + i}`} style={{ flex: 1 }}>
-                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
-                  </View>
-                ))}
-              </View>
+            <View style={styles.imageFillContainer}>
+              <Image style={[styles.fullImage, { objectFit: quote.descrizioneProdottiImageFit || 'contain' }]} src={img!} />
             </View>
           </Page>
         );
-      }
+      });
       return pages;
     })()}
 
