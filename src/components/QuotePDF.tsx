@@ -1,5 +1,5 @@
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Image, Link } from '@react-pdf/renderer';
 import { format } from 'date-fns';
 import { type Quote, type Settings } from '../db';
 
@@ -252,14 +252,25 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       );
     })}
     {/* Index Page */}
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.page} id="indice">
       {renderHeader()}
+      {quote.tocTextAbove && (
+        <Text style={{ fontSize: 11, color: '#4b5563', marginBottom: 12 }}>{quote.tocTextAbove}</Text>
+      )}
       <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>Indice</Text>
       <View style={{ marginBottom: 12 }}>
-        <Text>1. Premessa</Text>
-        <Text>2. Descrizione prodotti</Text>
-        <Text>3. Offerta economica</Text>
-        <Text>4. Condizioni di fornitura</Text>
+        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
+          • <Link src="#premessa">1. Premessa</Link>
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
+          • <Link src="#descrizione">2. Descrizione prodotti</Link>
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
+          • <Link src="#offerta">3. Offerta economica</Link>
+        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
+          • <Link src="#condizioni">4. Condizioni di fornitura</Link>
+        </Text>
       </View>
       {quote.tocText && (
         <Text style={{ fontSize: 11, color: '#4b5563' }}>{quote.tocText}</Text>
@@ -267,7 +278,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     </Page>
 
     {/* Premessa Page - Hardware + Software + Target Audience */}
-    <Page size="A4" style={styles.attachmentPage}>
+    <Page size="A4" style={styles.attachmentPage} id="premessa">
       {renderHeader()}
       <Text style={styles.attachmentTitle}>1. Premessa</Text>
       {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
@@ -353,7 +364,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       const pages: React.ReactElement[] = [];
       const firstChunk = imgs.slice(0, perPage);
       pages.push(
-        <Page key="desc-prod-0" size="A4" style={styles.attachmentPage}>
+        <Page key="desc-prod-0" size="A4" style={styles.attachmentPage} id="descrizione">
           {renderHeader()}
           <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
           {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
@@ -407,7 +418,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     })()}
 
     {/* Economic Offer: main quote page */}
-    <Page size="A4" style={styles.page}>
+    <Page size="A4" style={styles.page} id="offerta">
       {renderHeader()}
       <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. Offerta economica</Text>
 
@@ -466,7 +477,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       )}
       {/* Conditions inline below economic offer */}
       {(quote.conditionsList && quote.conditionsList.length > 0) && (
-        <View style={{ marginTop: 16 }}>
+        <View style={{ marginTop: 16 }} id="condizioni">
           <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>4. Condizioni di fornitura</Text>
           <View>
             {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (

@@ -38,8 +38,9 @@ export const NewQuote: React.FC = () => {
       items: [],
       attachments: [],
       attachmentsPosition: 'after',
-      tocText: '',
-      premessaText: '',
+      tocTextAbove: 'A proseguimento dei colloqui intercorsi siamo lieti di sottoporVi la ns. Migliore offerta relativa a quanto in oggetto, così articolata:',
+      tocText: 'Nell\'augurarci che la presente possa fornirVi gli elementi necessari a valutare la qualità della ns. soluzione, Vi confermiamo la ns. completa disponibilità per ogni ulteriore chiarimento e, nel ringraziarVi per la Vs. preferenza, cogliamo l’occasione per porgerVi i ns. più cordiali saluti.',
+      premessaText: 'La Esse Group SRL è un’Azienda formata da elementi con pluriennale esperienza nel settore Retail, e promuove la vendita di qualificati marchi, sia hardware che software, tra i quali:',
       premessaHardwareImages: [],
       premessaHardwareImageCount: 0,
       softwareText: '',
@@ -232,6 +233,7 @@ export const NewQuote: React.FC = () => {
           return av - bv;
         }).pop();
         if (!last) return;
+        if (last.tocTextAbove) setValue('tocTextAbove', last.tocTextAbove);
         if (last.premessaText) setValue('premessaText', last.premessaText);
         if (last.premessaHardwareImages) setValue('premessaHardwareImages', last.premessaHardwareImages);
         if (last.premessaHardwareImageHeight) setValue('premessaHardwareImageHeight', last.premessaHardwareImageHeight);
@@ -437,6 +439,7 @@ export const NewQuote: React.FC = () => {
                           items: getValues('items') || [],
                           attachments: getValues('attachments') || [],
                           attachmentsPosition: getValues('attachmentsPosition') || 'after',
+                          tocTextAbove: getValues('tocTextAbove') || '',
                           tocText: getValues('tocText') || '',
                           premessaText: getValues('premessaText') || '',
                           premessaHardwareImages: getValues('premessaHardwareImages') || [],
@@ -629,6 +632,15 @@ export const NewQuote: React.FC = () => {
           <div className="mt-6 bg-slate-50/60 rounded-xl p-4 border border-slate-200">
             <h3 className="text-sm font-bold text-slate-700 mb-3">Struttura Documento</h3>
             <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Testo sopra Indice</label>
+                <textarea
+                  {...register('tocTextAbove' as const)}
+                  rows={3}
+                  className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  placeholder="Testo sopra l'indice..."
+                />
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Testo sotto Indice</label>
                 <textarea

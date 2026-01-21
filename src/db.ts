@@ -50,6 +50,7 @@ export interface Quote {
   customerVat: string;
   items: QuoteItem[];
   attachments?: QuoteAttachment[];
+  tocTextAbove?: string;
   tocText?: string;
   premessaText?: string;
   premessaHardwareImages?: string[];
