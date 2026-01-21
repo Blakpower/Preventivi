@@ -8,6 +8,17 @@ export interface User {
   passwordHash: string;
 }
 
+export interface Customer {
+  id?: number;
+  name: string;
+  address: string;
+  vat: string;
+  email?: string;
+  phone?: string;
+  pec?: string;
+  recipientCode?: string;
+}
+
 export interface Article {
   id?: number;
   code: string;
@@ -60,13 +71,16 @@ export interface Quote {
   softwareImages?: string[];
   softwareImageHeight?: number;
   softwareImageCount?: number;
+  softwareImageScale?: number;
   targetAudienceImages?: string[];
   targetAudienceImageHeight?: number;
   targetAudienceImageCount?: number;
+  targetAudienceImageScale?: number;
   descrizioneProdottiText?: string;
   descrizioneProdottiImages?: string[];
   descrizioneProdottiImageCount?: number;
   descrizioneProdottiImageFit?: 'contain' | 'cover';
+  descrizioneProdottiFirstImageScale?: number;
   conditionsList?: string[];
   conditionsCount?: number;
   subtotal: number;
@@ -76,6 +90,7 @@ export interface Quote {
   createdAt: Date;
   ownerUserId?: number;
   attachmentsPosition?: 'before' | 'after';
+  customerId?: number;
 }
 
 export interface Settings {
@@ -119,6 +134,7 @@ export interface Settings {
 export class MyDatabase extends Dexie {
   users!: Table<User>;
   articles!: Table<Article>;
+  customers!: Table<Customer>;
   quotes!: Table<Quote>;
   settings!: Table<Settings>;
 
@@ -161,6 +177,13 @@ export class MyDatabase extends Dexie {
           if (!s.userId) s.userId = admin.id!;
         });
       }
+    });
+    this.version(4).stores({
+      users: '++id, username',
+      articles: '++id, code, description',
+      customers: '++id, name, vat',
+      quotes: '++id, number, date, customerName, createdAt, ownerUserId, customerId',
+      settings: '++id, userId'
     });
   }
 }

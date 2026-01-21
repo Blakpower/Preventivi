@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FileText, Database, Settings, PlusCircle, Menu, Bell } from 'lucide-react';
+import { LayoutDashboard, FileText, Database, Settings, PlusCircle, Menu, Bell, Users } from 'lucide-react';
 import clsx from 'clsx';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, getCurrentUserId, setCurrentUserId, type User } from '../db';
@@ -18,6 +18,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const navItems = [
     { path: '/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/quotes', label: 'Preventivi', icon: FileText },
+    { path: '/customers', label: 'Clienti', icon: Users },
     { path: '/articles', label: 'Articoli', icon: Database },
     { path: '/settings', label: 'Impostazioni', icon: Settings },
     { path: '/users', label: 'Utenti', icon: Settings },

@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Articles } from './pages/Articles';
 import { Quotes } from './pages/Quotes';
 import { NewQuote } from './pages/NewQuote';
+import { Customers } from './pages/Customers';
 import { SettingsPage } from './pages/Settings';
 import { Login } from './pages/Login';
 import { Users } from './pages/Users';
@@ -28,6 +29,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/articles" element={<Articles />} />
+                  <Route path="/customers" element={<Customers />} />
                   <Route path="/quotes" element={<Quotes />} />
                   <Route path="/quotes/new" element={<NewQuote />} />
                   <Route path="/settings" element={<SettingsPage />} />

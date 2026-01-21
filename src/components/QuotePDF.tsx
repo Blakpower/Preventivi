@@ -295,31 +295,64 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {/* Pagina Software + descrizione + Target Audience (stessa pagina, adattamento automatico) */}
     <Page size="A4" style={styles.attachmentPage}>
       {renderHeader()}
-      <View style={{ flexGrow: 1 }}>
-        <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Software</Text>
+      
+        <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 4 }]}>Software</Text>
         {(() => {
           const firstSw = (quote.softwareImages || []).filter(Boolean)[0];
+          const swBaseHeight = Number(quote.softwareImageHeight ?? settings.defaultSoftwareHeight ?? 180);
+          const swScale = Number(quote.softwareImageScale ?? 100) / 100;
+          const CONTENT_WIDTH = 530; // Safer max width than 100%
+          
           return firstSw ? (
-            <View style={{ height: settings.defaultSoftwareHeight ?? 180, marginBottom: 6 }}>
-              <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={firstSw} />
+            <View style={{ 
+              width: '100%',
+              alignItems: 'center',
+              marginTop: 2,
+              marginBottom: 6 
+            }}>
+              <Image 
+                style={{ 
+                  width: Math.min(swScale * CONTENT_WIDTH, CONTENT_WIDTH),
+                  height: swBaseHeight * swScale,
+                  objectFit: 'contain' 
+                }} 
+                src={firstSw} 
+              />
             </View>
           ) : null;
         })()}
-        <Text style={[styles.attachmentText, { marginTop: 6, fontSize: 10, lineHeight: 1.35 }]}>
-          {quote.softwareText || "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi."}
-        </Text>
+        <View style={{ marginTop: 6 }}>
+          <Text style={[styles.attachmentText, { fontSize: 10, lineHeight: 1.35 }]}>
+            {quote.softwareText || "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi."}
+          </Text>
+        </View>
         {(() => {
           const firstAud = (quote.targetAudienceImages || []).filter(Boolean)[0];
+          const audBaseHeight = Number(quote.targetAudienceImageHeight ?? settings.defaultTargetHeight ?? 180);
+          const audScale = Number(quote.targetAudienceImageScale ?? 100) / 100;
+          const CONTENT_WIDTH = 530;
+
           return firstAud ? (
-            <>
-              <Text style={[styles.attachmentTitle, { marginTop: 10, textAlign: 'center' }]}>A chi ci rivolgiamo</Text>
-              <View style={{ height: settings.defaultTargetHeight ?? 180, marginTop: 6 }}>
-                <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={firstAud} />
+            <View style={{ marginTop: 20 }}>
+              <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 0 }]}>A chi ci rivolgiamo</Text>
+              <View style={{ 
+                width: '100%',
+                alignItems: 'center', 
+                marginTop: 0 
+              }}>
+                <Image 
+                  style={{ 
+                    width: Math.min(audScale * CONTENT_WIDTH, CONTENT_WIDTH),
+                    height: audBaseHeight * audScale,
+                    objectFit: 'contain' 
+                  }} 
+                  src={firstAud} 
+                />
               </View>
-            </>
+            </View>
           ) : null;
         })()}
-      </View>
+      
     </Page>
 
     {/* Sezione 2 - Descrizione Prodotti con prima immagine nella stessa pagina */}
@@ -333,8 +366,19 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
           {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
           {imgs[0] && (
-            <View style={{ height: settings.defaultDescrizioneFirstHeight ?? 300, marginTop: 10 }}>
-              <Image style={{ width: '100%', height: '100%', objectFit: 'contain' }} src={imgs[0]!} />
+            <View style={{ 
+              width: '100%',
+              alignItems: 'center',
+              marginTop: 10 
+            }}>
+              <Image 
+                style={{ 
+                  width: Math.min(Number(quote.descrizioneProdottiFirstImageScale ?? 100) / 100 * 530, 530),
+                  height: Math.max(100, Math.round((300 * Number(quote.descrizioneProdottiFirstImageScale ?? 100)) / 100)),
+                  objectFit: 'contain' 
+                }} 
+                src={imgs[0]!} 
+              />
             </View>
           )}
         </Page>

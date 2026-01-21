@@ -32,7 +32,17 @@ export const NewQuote: React.FC = () => {
     }
   });
 
-  const { register, control, handleSubmit, watch, setValue, getValues, formState: { errors } } = useForm<Quote>({
+  const customers = useLiveQuery(async () => {
+    try {
+      await ensureDbOpen();
+      return await db.customers.toArray();
+    } catch (error) {
+      logDexieError('Dexie customers query failed:', error);
+      return [];
+    }
+  });
+
+  const { register, control, handleSubmit, watch, setValue, getValues, formState: { errors }, clearErrors } = useForm<Quote>({
     defaultValues: {
       date: new Date(),
       items: [],
@@ -46,12 +56,15 @@ export const NewQuote: React.FC = () => {
       softwareText: "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi.",
       softwareImages: [],
       softwareImageCount: 0,
+      softwareImageScale: 80,
       targetAudienceImages: [],
       targetAudienceImageCount: 0,
+      targetAudienceImageScale: 70,
       descrizioneProdottiText: '',
       descrizioneProdottiImages: [],
       descrizioneProdottiImageCount: 0,
       descrizioneProdottiImageFit: 'contain',
+      descrizioneProdottiFirstImageScale: 190,
       conditionsList: [],
       conditionsCount: 0,
       subtotal: 0,
@@ -60,6 +73,8 @@ export const NewQuote: React.FC = () => {
       notes: ''
     }
   });
+
+  const watchedValues = watch();
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -137,6 +152,18 @@ export const NewQuote: React.FC = () => {
     const price = getValues(`items.${index}.unitPrice`) || 0;
     setValue(`items.${index}.total`, qty * price);
     recalcTotals();
+  };
+
+  const onCustomerSelect = (customerId: string) => {
+    if (!customerId) return;
+    const customer = customers?.find(c => c.id === Number(customerId));
+    if (customer) {
+      setValue('customerId', customer.id);
+      setValue('customerName', customer.name);
+      setValue('customerVat', customer.vat);
+      setValue('customerAddress', customer.address);
+      clearErrors(['customerName', 'customerVat', 'customerAddress']);
+    }
   };
 
   const toBase64 = (file: File) =>
@@ -264,13 +291,16 @@ export const NewQuote: React.FC = () => {
         if (last.softwareImages) setValue('softwareImages', last.softwareImages);
         if (last.softwareImageHeight) setValue('softwareImageHeight', last.softwareImageHeight);
         if (last.softwareImageCount) setValue('softwareImageCount', last.softwareImageCount);
+        if (last.softwareImageScale) setValue('softwareImageScale', last.softwareImageScale);
         if (last.targetAudienceImages) setValue('targetAudienceImages', last.targetAudienceImages);
         if (last.targetAudienceImageHeight) setValue('targetAudienceImageHeight', last.targetAudienceImageHeight);
         if (last.targetAudienceImageCount) setValue('targetAudienceImageCount', last.targetAudienceImageCount);
+        if (last.targetAudienceImageScale) setValue('targetAudienceImageScale', last.targetAudienceImageScale);
         if (last.descrizioneProdottiText) setValue('descrizioneProdottiText', last.descrizioneProdottiText);
         if (last.descrizioneProdottiImages) setValue('descrizioneProdottiImages', last.descrizioneProdottiImages);
         if (last.descrizioneProdottiImageCount) setValue('descrizioneProdottiImageCount', last.descrizioneProdottiImageCount);
         if (last.descrizioneProdottiImageFit) setValue('descrizioneProdottiImageFit', last.descrizioneProdottiImageFit);
+        if (last.descrizioneProdottiFirstImageScale) setValue('descrizioneProdottiFirstImageScale', last.descrizioneProdottiFirstImageScale);
         if (last.conditionsList) setValue('conditionsList', last.conditionsList);
         if (last.conditionsCount) setValue('conditionsCount', last.conditionsCount);
       } catch (e) {
@@ -345,6 +375,19 @@ export const NewQuote: React.FC = () => {
                   <User size={20} />
                 </div>
                 <h2 className="text-lg font-bold text-slate-800">Dati Cliente</h2>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Seleziona da Database (Opzionale)</label>
+                <select
+                  onChange={(e) => onCustomerSelect(e.target.value)}
+                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-white border transition-colors"
+                >
+                  <option value="">-- Seleziona un cliente salvato --</option>
+                  {customers?.map(c => (
+                    <option key={c.id} value={c.id}>{c.name} {c.vat ? `(${c.vat})` : ''}</option>
+                  ))}
+                </select>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -454,39 +497,16 @@ export const NewQuote: React.FC = () => {
                     <PDFViewer style={{ width: '100%', height: 420 }}>
                       <QuotePDF
                         quote={{
-                          number: getValues('number') || '',
-                          date: getValues('date') || new Date(),
-                          customerName: getValues('customerName') || '',
-                          customerAddress: getValues('customerAddress') || '',
-                          customerVat: getValues('customerVat') || '',
-                          items: getValues('items') || [],
-                          attachments: getValues('attachments') || [],
-                          attachmentsPosition: getValues('attachmentsPosition') || 'after',
-                          tocTextAbove: getValues('tocTextAbove') || '',
-                          tocText: getValues('tocText') || '',
-                          premessaText: getValues('premessaText') || '',
-                          premessaHardwareImages: getValues('premessaHardwareImages') || [],
-                          premessaHardwareImageHeight: getValues('premessaHardwareImageHeight') || undefined,
-                          premessaHardwareImageCount: getValues('premessaHardwareImageCount') || 0,
-                          softwareText: getValues('softwareText') || '',
-                          softwareImages: getValues('softwareImages') || [],
-                          softwareImageHeight: getValues('softwareImageHeight') || undefined,
-                          softwareImageCount: getValues('softwareImageCount') || 0,
-                          targetAudienceImages: getValues('targetAudienceImages') || [],
-                          targetAudienceImageHeight: getValues('targetAudienceImageHeight') || undefined,
-                          targetAudienceImageCount: getValues('targetAudienceImageCount') || 0,
-                          descrizioneProdottiText: getValues('descrizioneProdottiText') || '',
-                          descrizioneProdottiImages: getValues('descrizioneProdottiImages') || [],
-                          descrizioneProdottiImageCount: getValues('descrizioneProdottiImageCount') || 0,
-                          descrizioneProdottiImageFit: getValues('descrizioneProdottiImageFit') || 'contain',
-                          conditionsList: getValues('conditionsList') || [],
-                          conditionsCount: getValues('conditionsCount') || 0,
-                          subtotal: getValues('subtotal') || 0,
-                          vatTotal: getValues('vatTotal') || 0,
-                          total: getValues('total') || 0,
-                          notes: getValues('notes') || '',
+                          ...watchedValues,
+                          number: watchedValues.number || getValues('number') || '',
+                          date: watchedValues.date || getValues('date') || new Date(),
                           createdAt: new Date(),
-                        }}
+                          items: watchedValues.items || [],
+                          attachments: watchedValues.attachments || [],
+                          softwareImageScale: Number(watchedValues.softwareImageScale || 100),
+                          targetAudienceImageScale: Number(watchedValues.targetAudienceImageScale || 100),
+                          descrizioneProdottiFirstImageScale: Number(watchedValues.descrizioneProdottiFirstImageScale || 100),
+                        } as Quote}
                         settings={settings}
                       />
                     </PDFViewer>
@@ -763,6 +783,20 @@ export const NewQuote: React.FC = () => {
                     placeholder="150"
                   />
                 </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine (percentuale)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('softwareImageScale' as const, { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('softwareImageScale') || 100}%</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">A chi ci rivolgiamo</label>
@@ -824,6 +858,20 @@ export const NewQuote: React.FC = () => {
                     placeholder="120"
                   />
                 </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine (percentuale)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('targetAudienceImageScale' as const, { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('targetAudienceImageScale') || 100}%</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">2. Descrizione Prodotti - Testo</label>
@@ -856,6 +904,21 @@ export const NewQuote: React.FC = () => {
                     <option value="contain">Adatta alla pagina (consigliato)</option>
                     <option value="cover">Riempi la pagina (può tagliare)</option>
                   </select>
+                </div>
+                <div className="mt-3">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala prima immagine (percentuale)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('descrizioneProdottiFirstImageScale' as const, { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('descrizioneProdottiFirstImageScale') || 100}%</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Regola la dimensione della prima immagine in pagina con il testo.</p>
                 </div>
                 {descrizioneCount > 0 && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
