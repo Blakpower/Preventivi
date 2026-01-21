@@ -155,6 +155,14 @@ const styles = StyleSheet.create({
     objectFit: 'cover',
     marginBottom: 12,
   },
+  fullImagePage: {
+    padding: 0,
+  },
+  fullImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
   attachmentText: {
     fontSize: 11,
     lineHeight: 1.5,
@@ -169,9 +177,165 @@ interface QuotePDFProps {
 export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
   const contractPages = (settings.contractPagesText || '').split('---').map(p => p.trim()).filter(Boolean);
   const displayNumber = quote.number && String(quote.number).trim() ? quote.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
+  const attachments = quote.attachments || [];
+  const attachmentsBefore = (quote.attachmentsPosition || 'after') === 'before';
   return (
   <Document>
+    {attachmentsBefore && attachments.map(/* render each */ (att, idx) => {
+      const layout = att.layout || {};
+      const pos = layout.imagePosition || 'top';
+      const imgH = layout.imageHeight || 300;
+      const descSize = layout.descriptionFontSize || 11;
+      const descColor = layout.descriptionColor || '#333';
+      const showTitle = layout.showTitle !== false;
+      const imageEl = att.imageData ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData} /> : null;
+      const descEl = att.description ? <Text style={[styles.attachmentText, { fontSize: descSize, color: descColor }]}>{att.description}</Text> : null;
+      if (layout.fullPageImage && att.imageData) {
+        return (
+          <Page key={`att-top-${idx}`} size="A4" style={styles.fullImagePage}>
+            <Image style={styles.fullImage} src={att.imageData} />
+          </Page>
+        );
+      }
+      return (
+        <Page key={`att-top-${idx}`} size="A4" style={styles.attachmentPage}>
+          {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
+          {pos === 'left' || pos === 'right' ? (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {pos === 'left' && <View style={{ width: '50%' }}>{imageEl}</View>}
+              <View style={{ width: '50%' }}>{descEl}</View>
+              {pos === 'right' && <View style={{ width: '50%' }}>{imageEl}</View>}
+            </View>
+          ) : (
+            <>
+              {pos === 'top' && imageEl}
+              {descEl}
+              {pos === 'bottom' && imageEl}
+            </>
+          )}
+        </Page>
+      );
+    })}
+    {/* Index Page */}
     <Page size="A4" style={styles.page}>
+      <View style={{ marginBottom: 10 }}>
+        <View style={styles.header}>
+          <View style={styles.companyInfo}>
+            <Text style={styles.companyName}>{settings.companyName}</Text>
+            <Text>{settings.companyAddress}</Text>
+            <Text>P.IVA: {settings.companyVat}</Text>
+            <Text>{settings.companyEmail}</Text>
+            <Text>{settings.companyPhone}</Text>
+          </View>
+          <View style={styles.titleSection}>
+            {(settings.logoData || settings.logoUrl) && (
+              <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
+            )}
+            <Text style={styles.quoteMeta}>N. {displayNumber}</Text>
+            <Text style={styles.quoteMeta}>Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
+          </View>
+        </View>
+      </View>
+      <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>Indice</Text>
+      <View style={{ marginBottom: 12 }}>
+        <Text>1. Premessa</Text>
+        <Text>2. Descrizione prodotti</Text>
+        <Text>3. Offerta economica</Text>
+        <Text>4. Condizioni di fornitura</Text>
+      </View>
+      {quote.tocText && (
+        <Text style={{ fontSize: 11, color: '#4b5563' }}>{quote.tocText}</Text>
+      )}
+    </Page>
+
+    {/* Premessa Page - Hardware + Software + Target Audience */}
+    <Page size="A4" style={styles.attachmentPage}>
+      <Text style={styles.attachmentTitle}>1. Premessa</Text>
+      {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
+      <View style={{ marginTop: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          {(quote.premessaHardwareImages || []).slice(0, 3).map((img, i) => (
+            <View key={`hw-top-${i}`} style={{ flex: 1 }}>
+              {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+            </View>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(quote.premessaHardwareImages || []).slice(3, 6).map((img, i) => (
+            <View key={`hw-bottom-${i}`} style={{ flex: 1 }}>
+              {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* Software continuation */}
+      <Text style={[styles.attachmentTitle, { marginTop: 16 }]}>Software</Text>
+      {quote.softwareText && <Text style={styles.attachmentText}>{quote.softwareText}</Text>}
+      <View style={{ marginTop: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          {(quote.softwareImages || []).slice(0, 3).map((img, i) => (
+            <View key={`sw-top-${i}`} style={{ flex: 1 }}>
+              {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+            </View>
+          ))}
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(quote.softwareImages || []).slice(3, 6).map((img, i) => (
+            <View key={`sw-bottom-${i}`} style={{ flex: 1 }}>
+              {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* Target Audience */}
+      {(quote.targetAudienceImages && quote.targetAudienceImages.length > 0) && (
+        <>
+          <Text style={[styles.attachmentTitle, { marginTop: 16 }]}>A chi ci rivolgiamo</Text>
+          <View style={{ marginTop: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              {(quote.targetAudienceImages || []).slice(0, 5).map((img, i) => (
+                <View key={`aud-top-${i}`} style={{ flex: 1 }}>
+                  {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
+                </View>
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {(quote.targetAudienceImages || []).slice(5, 9).map((img, i) => (
+                <View key={`aud-bottom-${i}`} style={{ flex: 1 }}>
+                  {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
+                </View>
+              ))}
+            </View>
+          </View>
+        </>
+      )}
+    </Page>
+
+    {/* Page 2 - Descrizione Prodotti */}
+    <Page size="A4" style={styles.attachmentPage}>
+      <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
+      {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
+    </Page>
+
+    {/* Economic Offer: main quote page */}
+    <Page size="A4" style={styles.page}>
+      <View style={styles.header}>
+        <View style={styles.companyInfo}>
+          <Text style={styles.companyName}>{settings.companyName}</Text>
+          <Text>{settings.companyAddress}</Text>
+          <Text>P.IVA: {settings.companyVat}</Text>
+          <Text>{settings.companyEmail}</Text>
+          <Text>{settings.companyPhone}</Text>
+        </View>
+        <View style={styles.titleSection}>
+          {(settings.logoData || settings.logoUrl) && (
+            <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
+          )}
+          <Text style={styles.quoteMeta}>N. {displayNumber}</Text>
+          <Text style={styles.quoteMeta}>Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
+        </View>
+      </View>
+      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. Offerta economica</Text>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.companyInfo}>
@@ -251,7 +415,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     </Page>
     
     {/* Attachments with customizable layout */}
-    {(quote.attachments || []).map((att, idx) => {
+    {!attachmentsBefore && attachments.map((att, idx) => {
       const layout = att.layout || {};
       const pos = layout.imagePosition || 'top';
       const imgH = layout.imageHeight || 300;
@@ -262,34 +426,42 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       const imageEl = att.imageData ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData} /> : null;
       const descEl = att.description ? <Text style={[styles.attachmentText, { fontSize: descSize, color: descColor }]}>{att.description}</Text> : null;
 
-      return (
-        <Page key={`att-${idx}`} size="A4" style={styles.attachmentPage}>
-          {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
-          {pos === 'left' || pos === 'right' ? (
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              {pos === 'left' && (
+      if (layout.fullPageImage && att.imageData) {
+        return (
+          <Page key={`att-${idx}`} size="A4" style={styles.fullImagePage}>
+            <Image style={styles.fullImage} src={att.imageData} />
+          </Page>
+        );
+      } else {
+        return (
+          <Page key={`att-${idx}`} size="A4" style={styles.attachmentPage}>
+            {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
+            {pos === 'left' || pos === 'right' ? (
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {pos === 'left' && (
+                  <View style={{ width: '50%' }}>
+                    {imageEl}
+                  </View>
+                )}
                 <View style={{ width: '50%' }}>
-                  {imageEl}
+                  {descEl}
                 </View>
-              )}
-              <View style={{ width: '50%' }}>
-                {descEl}
+                {pos === 'right' && (
+                  <View style={{ width: '50%' }}>
+                    {imageEl}
+                  </View>
+                )}
               </View>
-              {pos === 'right' && (
-                <View style={{ width: '50%' }}>
-                  {imageEl}
-                </View>
-              )}
-            </View>
-          ) : (
-            <>
-              {pos === 'top' && imageEl}
-              {descEl}
-              {pos === 'bottom' && imageEl}
-            </>
-          )}
-        </Page>
-      );
+            ) : (
+              <>
+                {pos === 'top' && imageEl}
+                {descEl}
+                {pos === 'bottom' && imageEl}
+              </>
+            )}
+          </Page>
+        );
+      }
     })}
 
     {/* Contract Pages at end */}

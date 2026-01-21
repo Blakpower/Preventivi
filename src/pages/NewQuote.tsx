@@ -37,6 +37,13 @@ export const NewQuote: React.FC = () => {
       date: new Date(),
       items: [],
       attachments: [],
+      attachmentsPosition: 'after',
+      tocText: '',
+      premessaText: '',
+      premessaHardwareImages: [],
+      softwareText: '',
+      softwareImages: [],
+      targetAudienceImages: [],
       subtotal: 0,
       vatTotal: 0,
       total: 0,
@@ -58,6 +65,9 @@ export const NewQuote: React.FC = () => {
   useEffect(() => {
     if (settings && !getValues('number')) {
       setValue('number', `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`);
+      if (settings.attachmentsDefaults?.position) {
+        setValue('attachmentsPosition', settings.attachmentsDefaults.position);
+      }
     }
   }, [settings, setValue, getValues]);
 
@@ -111,6 +121,55 @@ export const NewQuote: React.FC = () => {
     const dataUrl = await toBase64(file);
     setValue(`attachments.${index}.imageData`, dataUrl, { shouldDirty: true });
   };
+  const onHardwareImageChange = async (idx: number, file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    const arr = getValues('premessaHardwareImages') || [];
+    arr[idx] = dataUrl;
+    setValue('premessaHardwareImages', arr, { shouldDirty: true });
+  };
+  const onSoftwareImageChange = async (idx: number, file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    const arr = getValues('softwareImages') || [];
+    arr[idx] = dataUrl;
+    setValue('softwareImages', arr, { shouldDirty: true });
+  };
+  const onTargetAudienceImageChange = async (idx: number, file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    const arr = getValues('targetAudienceImages') || [];
+    arr[idx] = dataUrl;
+    setValue('targetAudienceImages', arr, { shouldDirty: true });
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await ensureDbOpen();
+        const uid = getCurrentUserId();
+        if (!uid) return;
+        const arr = await db.quotes.where('ownerUserId').equals(uid).toArray();
+        const last = arr.sort((a, b) => {
+          const av = a.createdAt ? new Date(a.createdAt).valueOf() : 0;
+          const bv = b.createdAt ? new Date(b.createdAt).valueOf() : 0;
+          return av - bv;
+        }).pop();
+        if (!last) return;
+        if (last.premessaText) setValue('premessaText', last.premessaText);
+        if (last.premessaHardwareImages) setValue('premessaHardwareImages', last.premessaHardwareImages);
+        if (last.premessaHardwareImageHeight) setValue('premessaHardwareImageHeight', last.premessaHardwareImageHeight);
+        if (last.softwareText) setValue('softwareText', last.softwareText);
+        if (last.softwareImages) setValue('softwareImages', last.softwareImages);
+        if (last.softwareImageHeight) setValue('softwareImageHeight', last.softwareImageHeight);
+        if (last.targetAudienceImages) setValue('targetAudienceImages', last.targetAudienceImages);
+        if (last.targetAudienceImageHeight) setValue('targetAudienceImageHeight', last.targetAudienceImageHeight);
+        if (last.descrizioneProdottiText) setValue('descrizioneProdottiText', last.descrizioneProdottiText);
+      } catch (e) {
+        logDexieError('Load last quote defaults failed', e);
+      }
+    })();
+  }, [setValue]);
 
   const onSubmit = async (data: Quote) => {
     try {
@@ -126,7 +185,11 @@ export const NewQuote: React.FC = () => {
 
       // Update next quote number
       await db.settings.update(settings.id!, {
-        nextQuoteNumber: settings.nextQuoteNumber + 1
+        nextQuoteNumber: settings.nextQuoteNumber + 1,
+        attachmentsDefaults: {
+          position: data.attachmentsPosition,
+          layout: data.attachments && data.attachments[0]?.layout ? data.attachments[0]?.layout : settings.attachmentsDefaults?.layout
+        }
       });
 
       navigate('/quotes');
@@ -290,6 +353,17 @@ export const NewQuote: React.FC = () => {
                           customerVat: getValues('customerVat') || '',
                           items: getValues('items') || [],
                           attachments: getValues('attachments') || [],
+                          attachmentsPosition: getValues('attachmentsPosition') || 'after',
+                          tocText: getValues('tocText') || '',
+                          premessaText: getValues('premessaText') || '',
+                          premessaHardwareImages: getValues('premessaHardwareImages') || [],
+                          premessaHardwareImageHeight: getValues('premessaHardwareImageHeight') || undefined,
+                          softwareText: getValues('softwareText') || '',
+                          softwareImages: getValues('softwareImages') || [],
+                          softwareImageHeight: getValues('softwareImageHeight') || undefined,
+                          targetAudienceImages: getValues('targetAudienceImages') || [],
+                          targetAudienceImageHeight: getValues('targetAudienceImageHeight') || undefined,
+                          descrizioneProdottiText: getValues('descrizioneProdottiText') || '',
                           subtotal: getValues('subtotal') || 0,
                           vatTotal: getValues('vatTotal') || 0,
                           total: getValues('total') || 0,
@@ -446,11 +520,12 @@ export const NewQuote: React.FC = () => {
                   description: `Descrizione ${attachFields.length + 1}`,
                   imageData: '',
                   layout: {
-                    imagePosition: 'top',
-                    imageHeight: 300,
-                    descriptionFontSize: 11,
-                    descriptionColor: '#333333',
-                    showTitle: true
+                    imagePosition: settings?.attachmentsDefaults?.layout?.imagePosition ?? 'top',
+                    imageHeight: settings?.attachmentsDefaults?.layout?.imageHeight ?? 300,
+                    descriptionFontSize: settings?.attachmentsDefaults?.layout?.descriptionFontSize ?? 11,
+                    descriptionColor: settings?.attachmentsDefaults?.layout?.descriptionColor ?? '#333333',
+                    showTitle: settings?.attachmentsDefaults?.layout?.showTitle ?? true,
+                    fullPageImage: settings?.attachmentsDefaults?.layout?.fullPageImage ?? false
                   }
                 })
               }
@@ -459,6 +534,128 @@ export const NewQuote: React.FC = () => {
               <Plus size={18} />
               <span>Aggiungi Allegato</span>
             </button>
+          </div>
+          
+          <div className="mt-6 bg-slate-50/60 rounded-xl p-4 border border-slate-200">
+            <h3 className="text-sm font-bold text-slate-700 mb-3">Struttura Documento</h3>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Testo sotto Indice</label>
+                <textarea
+                  {...register('tocText' as const)}
+                  rows={3}
+                  className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  placeholder="Testo introduttivo dell'indice..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Premessa - Descrizione</label>
+                <textarea
+                  {...register('premessaText' as const)}
+                  rows={3}
+                  className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  placeholder="Breve descrizione della premessa..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Premessa - Immagini Hardware (6)</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[0,1,2,3,4,5].map(i => (
+                    <input
+                      key={`hw-${i}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onHardwareImageChange(i, e.target.files?.[0])}
+                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    />
+                  ))}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini hardware (px)</label>
+                  <input
+                    type="number"
+                    {...register('premessaHardwareImageHeight' as const, { valueAsNumber: true })}
+                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    placeholder="150"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Descrizione</label>
+                <textarea
+                  {...register('softwareText' as const)}
+                  rows={3}
+                  className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  placeholder="Breve descrizione del software..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Immagini (6)</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {[0,1,2,3,4,5].map(i => (
+                    <input
+                      key={`sw-${i}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onSoftwareImageChange(i, e.target.files?.[0])}
+                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    />
+                  ))}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini software (px)</label>
+                  <input
+                    type="number"
+                    {...register('softwareImageHeight' as const, { valueAsNumber: true })}
+                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    placeholder="150"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo - Immagini (9)</label>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  {[0,1,2,3,4].map(i => (
+                    <input
+                      key={`aud-top-${i}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onTargetAudienceImageChange(i, e.target.files?.[0])}
+                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
+                  {[5,6,7,8].map(i => (
+                    <input
+                      key={`aud-bottom-${i}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => onTargetAudienceImageChange(i, e.target.files?.[0])}
+                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    />
+                  ))}
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini (px)</label>
+                  <input
+                    type="number"
+                    {...register('targetAudienceImageHeight' as const, { valueAsNumber: true })}
+                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                    placeholder="120"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">2. Descrizione Prodotti - Testo</label>
+                <textarea
+                  {...register('descrizioneProdottiText' as const)}
+                  rows={4}
+                  className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  placeholder="Descrizione dettagliata dei prodotti..."
+                />
+              </div>
+            </div>
           </div>
 
           <div className="space-y-6">
@@ -539,6 +736,14 @@ export const NewQuote: React.FC = () => {
                     />
                     <span className="text-sm text-slate-700">Mostra titolo in PDF</span>
                   </div>
+                  <div className="md:col-span-4 flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      {...register(`attachments.${index}.layout.fullPageImage` as const)}
+                      className="rounded border-slate-300"
+                    />
+                    <span className="text-sm text-slate-700">Immagine a pagina intera</span>
+                  </div>
                 </div>
                 <div className="md:col-span-3 flex justify-between">
                   <div className="flex items-center space-x-2">
@@ -572,6 +777,16 @@ export const NewQuote: React.FC = () => {
             {attachFields.length === 0 && (
               <p className="text-sm text-slate-500">Nessun allegato. Aggiungi una pagina con foto e descrizione.</p>
             )}
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Posizione allegati nel PDF</label>
+            <select
+              {...register('attachmentsPosition' as const)}
+              className="w-full md:w-64 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+            >
+              <option value="after">Dopo il preventivo</option>
+              <option value="before">Prima del preventivo</option>
+            </select>
           </div>
         </div>
       </form>

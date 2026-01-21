@@ -37,6 +37,7 @@ export interface QuoteAttachment {
     descriptionFontSize?: number;
     descriptionColor?: string;
     showTitle?: boolean;
+    fullPageImage?: boolean;
   };
 }
 
@@ -49,12 +50,23 @@ export interface Quote {
   customerVat: string;
   items: QuoteItem[];
   attachments?: QuoteAttachment[];
+  tocText?: string;
+  premessaText?: string;
+  premessaHardwareImages?: string[];
+  premessaHardwareImageHeight?: number;
+  softwareText?: string;
+  softwareImages?: string[];
+  softwareImageHeight?: number;
+  targetAudienceImages?: string[];
+  targetAudienceImageHeight?: number;
+  descrizioneProdottiText?: string;
   subtotal: number;
   vatTotal: number;
   total: number;
   notes: string;
   createdAt: Date;
   ownerUserId?: number;
+  attachmentsPosition?: 'before' | 'after';
 }
 
 export interface Settings {
@@ -72,6 +84,17 @@ export interface Settings {
   nextQuoteNumber: number;
   quoteNumberPrefix: string; // e.g., "2024-"
   defaultVat: number;
+  attachmentsDefaults?: {
+    position?: 'before' | 'after';
+    layout?: {
+      imagePosition?: 'top' | 'bottom' | 'left' | 'right';
+      imageHeight?: number;
+      descriptionFontSize?: number;
+      descriptionColor?: string;
+      showTitle?: boolean;
+      fullPageImage?: boolean;
+    };
+  };
 }
 
 export class MyDatabase extends Dexie {
