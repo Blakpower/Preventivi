@@ -143,11 +143,28 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
             <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">PEC</label>
+              <input
+                type="email"
+                {...register('companyPec')}
+                className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                placeholder="es. azienda@pec.it"
+              />
+            </div>
+            <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Telefono</label>
               <input
                 type="tel"
                 {...register('companyPhone')}
                 className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Codice destinatario (SDI)</label>
+              <input
+                {...register('companyRecipientCode')}
+                className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
+                placeholder="es. 0000000 o univoco SDI"
               />
             </div>
           </div>

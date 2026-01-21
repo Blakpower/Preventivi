@@ -54,12 +54,19 @@ export interface Quote {
   premessaText?: string;
   premessaHardwareImages?: string[];
   premessaHardwareImageHeight?: number;
+  premessaHardwareImageCount?: number;
   softwareText?: string;
   softwareImages?: string[];
   softwareImageHeight?: number;
+  softwareImageCount?: number;
   targetAudienceImages?: string[];
   targetAudienceImageHeight?: number;
+  targetAudienceImageCount?: number;
   descrizioneProdottiText?: string;
+  descrizioneProdottiImages?: string[];
+  descrizioneProdottiImageCount?: number;
+  conditionsList?: string[];
+  conditionsCount?: number;
   subtotal: number;
   vatTotal: number;
   total: number;
@@ -76,7 +83,9 @@ export interface Settings {
   companyAddress: string;
   companyVat: string;
   companyEmail: string;
+  companyPec?: string;
   companyPhone: string;
+  companyRecipientCode?: string;
   bankInfo: string;
   logoUrl?: string;
   logoData?: string;
@@ -162,7 +171,9 @@ db.on('populate', () => {
       companyAddress: 'Via Roma 1, 00100 Roma',
       companyVat: '12345678901',
       companyEmail: 'info@azienda.it',
+      companyPec: 'pec@azienda.it',
       companyPhone: '06 123456',
+      companyRecipientCode: 'XXXXXXX',
       bankInfo: 'IBAN: IT00 X 00000 00000 000000000000',
       nextQuoteNumber: 1,
       quoteNumberPrefix: new Date().getFullYear() + '-',

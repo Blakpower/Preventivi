@@ -10,6 +10,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica',
     color: '#333',
   },
+  separator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginTop: 10,
+    marginBottom: 20,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -18,8 +24,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
     paddingBottom: 20,
   },
-  titleSection: {
-    alignItems: 'flex-end',
+  logoLeft: {
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 24,
@@ -32,7 +39,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   companyInfo: {
-    width: '45%',
+    width: '55%',
+    alignItems: 'flex-end',
   },
   companyName: {
     fontSize: 14,
@@ -156,12 +164,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fullImagePage: {
-    padding: 0,
+    padding: 40,
   },
   fullImage: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+  },
+  imageFillContainer: {
+    flexGrow: 1,
   },
   attachmentText: {
     fontSize: 11,
@@ -179,6 +190,26 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
   const displayNumber = quote.number && String(quote.number).trim() ? quote.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
   const attachments = quote.attachments || [];
   const attachmentsBefore = (quote.attachmentsPosition || 'after') === 'before';
+  const renderHeader = () => (
+    <>
+      <View style={styles.header}>
+        <View style={styles.logoLeft}>
+          {(settings.logoData || settings.logoUrl) && (
+            <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
+          )}
+        </View>
+        <View style={styles.companyInfo}>
+          <Text style={styles.companyName}>{settings.companyName}</Text>
+          <Text>{settings.companyAddress}</Text>
+          <Text>P.IVA: {settings.companyVat}</Text>
+          <Text>{settings.companyEmail}</Text>
+          <Text>{settings.companyPhone}</Text>
+          <Text style={styles.quoteMeta}>N. {displayNumber} • Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
+        </View>
+      </View>
+      <View style={styles.separator} />
+    </>
+  );
   return (
   <Document>
     {attachmentsBefore && attachments.map(/* render each */ (att, idx) => {
@@ -193,12 +224,16 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       if (layout.fullPageImage && att.imageData) {
         return (
           <Page key={`att-top-${idx}`} size="A4" style={styles.fullImagePage}>
-            <Image style={styles.fullImage} src={att.imageData} />
+            {renderHeader()}
+            <View style={styles.imageFillContainer}>
+              <Image style={styles.fullImage} src={att.imageData} />
+            </View>
           </Page>
         );
       }
       return (
         <Page key={`att-top-${idx}`} size="A4" style={styles.attachmentPage}>
+          {renderHeader()}
           {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
           {pos === 'left' || pos === 'right' ? (
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -218,24 +253,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     })}
     {/* Index Page */}
     <Page size="A4" style={styles.page}>
-      <View style={{ marginBottom: 10 }}>
-        <View style={styles.header}>
-          <View style={styles.companyInfo}>
-            <Text style={styles.companyName}>{settings.companyName}</Text>
-            <Text>{settings.companyAddress}</Text>
-            <Text>P.IVA: {settings.companyVat}</Text>
-            <Text>{settings.companyEmail}</Text>
-            <Text>{settings.companyPhone}</Text>
-          </View>
-          <View style={styles.titleSection}>
-            {(settings.logoData || settings.logoUrl) && (
-              <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
-            )}
-            <Text style={styles.quoteMeta}>N. {displayNumber}</Text>
-            <Text style={styles.quoteMeta}>Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
-          </View>
-        </View>
-      </View>
+      {renderHeader()}
       <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>Indice</Text>
       <View style={{ marginBottom: 12 }}>
         <Text>1. Premessa</Text>
@@ -250,109 +268,148 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
     {/* Premessa Page - Hardware + Software + Target Audience */}
     <Page size="A4" style={styles.attachmentPage}>
+      {renderHeader()}
       <Text style={styles.attachmentTitle}>1. Premessa</Text>
       {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
       <View style={{ marginTop: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          {(quote.premessaHardwareImages || []).slice(0, 3).map((img, i) => (
-            <View key={`hw-top-${i}`} style={{ flex: 1 }}>
-              {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-            </View>
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(quote.premessaHardwareImages || []).slice(3, 6).map((img, i) => (
-            <View key={`hw-bottom-${i}`} style={{ flex: 1 }}>
-              {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-            </View>
-          ))}
-        </View>
+        <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
+        {(() => {
+          const imgs = (quote.premessaHardwareImages || []).filter(Boolean);
+          const cols = 3;
+          const rows = Math.ceil(imgs.length / cols);
+          const renderedRows: React.ReactElement[] = [];
+          for (let r = 0; r < rows; r++) {
+            const slice = imgs.slice(r * cols, (r + 1) * cols);
+            renderedRows.push(
+              <View key={`hw-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {slice.map((img, i) => (
+                  <View key={`hw-${r}-${i}`} style={{ flex: 1 }}>
+                    {img && <Image style={{ width: '100%', height: quote.premessaHardwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+                  </View>
+                ))}
+              </View>
+            );
+          }
+          return renderedRows;
+        })()}
       </View>
       {/* Software continuation */}
-      <Text style={[styles.attachmentTitle, { marginTop: 16 }]}>Software</Text>
+      <Text style={[styles.attachmentTitle, { marginTop: 16, textAlign: 'center' }]}>Software</Text>
       {quote.softwareText && <Text style={styles.attachmentText}>{quote.softwareText}</Text>}
       <View style={{ marginTop: 12 }}>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          {(quote.softwareImages || []).slice(0, 3).map((img, i) => (
-            <View key={`sw-top-${i}`} style={{ flex: 1 }}>
-              {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-            </View>
-          ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {(quote.softwareImages || []).slice(3, 6).map((img, i) => (
-            <View key={`sw-bottom-${i}`} style={{ flex: 1 }}>
-              {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
-            </View>
-          ))}
-        </View>
+        {(() => {
+          const imgs = (quote.softwareImages || []).filter(Boolean);
+          const cols = 3;
+          const rows = Math.ceil(imgs.length / cols);
+          const renderedRows: React.ReactElement[] = [];
+          for (let r = 0; r < rows; r++) {
+            const slice = imgs.slice(r * cols, (r + 1) * cols);
+            renderedRows.push(
+              <View key={`sw-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {slice.map((img, i) => (
+                  <View key={`sw-${r}-${i}`} style={{ flex: 1 }}>
+                    {img && <Image style={{ width: '100%', height: quote.softwareImageHeight || 150, objectFit: 'cover' }} src={img} />}
+                  </View>
+                ))}
+              </View>
+            );
+          }
+          return renderedRows;
+        })()}
       </View>
       {/* Target Audience */}
       {(quote.targetAudienceImages && quote.targetAudienceImages.length > 0) && (
         <>
-          <Text style={[styles.attachmentTitle, { marginTop: 16 }]}>A chi ci rivolgiamo</Text>
+          <Text style={[styles.attachmentTitle, { marginTop: 16, textAlign: 'center' }]}>A chi ci rivolgiamo</Text>
           <View style={{ marginTop: 12 }}>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-              {(quote.targetAudienceImages || []).slice(0, 5).map((img, i) => (
-                <View key={`aud-top-${i}`} style={{ flex: 1 }}>
-                  {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
-                </View>
-              ))}
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {(quote.targetAudienceImages || []).slice(5, 9).map((img, i) => (
-                <View key={`aud-bottom-${i}`} style={{ flex: 1 }}>
-                  {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
-                </View>
-              ))}
-            </View>
+            {(() => {
+              const imgs = (quote.targetAudienceImages || []).filter(Boolean);
+              const cols = 5;
+              const rows = Math.ceil(imgs.length / cols);
+              const renderedRows: React.ReactElement[] = [];
+              for (let r = 0; r < rows; r++) {
+                const slice = imgs.slice(r * cols, (r + 1) * cols);
+                renderedRows.push(
+                  <View key={`aud-row-${r}`} style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                    {slice.map((img, i) => (
+                      <View key={`aud-${r}-${i}`} style={{ flex: 1 }}>
+                        {img && <Image style={{ width: '100%', height: quote.targetAudienceImageHeight || 120, objectFit: 'cover' }} src={img} />}
+                      </View>
+                    ))}
+                  </View>
+                );
+              }
+              return renderedRows;
+            })()}
           </View>
         </>
       )}
     </Page>
 
-    {/* Page 2 - Descrizione Prodotti */}
-    <Page size="A4" style={styles.attachmentPage}>
-      <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
-      {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
-    </Page>
+    {/* Page 2 - Descrizione Prodotti con immagini nella stessa sezione */}
+    {(() => {
+      const imgs = (quote.descrizioneProdottiImages || []).filter(Boolean);
+      const perPage = 6;
+      const pages: React.ReactElement[] = [];
+      const firstChunk = imgs.slice(0, perPage);
+      pages.push(
+        <Page key="desc-prod-0" size="A4" style={styles.attachmentPage}>
+          {renderHeader()}
+          <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
+          {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
+          {firstChunk.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {firstChunk.slice(0, 3).map((img, i) => (
+                  <View key={`desc-prod-top-${i}`} style={{ flex: 1 }}>
+                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
+                  </View>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {firstChunk.slice(3, 6).map((img, i) => (
+                  <View key={`desc-prod-bottom-${i}`} style={{ flex: 1 }}>
+                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </Page>
+      );
+      const remaining = imgs.slice(perPage);
+      for (let offset = 0; offset < remaining.length; offset += perPage) {
+        const chunk = remaining.slice(offset, offset + perPage);
+        pages.push(
+          <Page key={`desc-prod-${offset + perPage}`} size="A4" style={styles.attachmentPage}>
+            {renderHeader()}
+            <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
+            <View style={{ marginTop: 12 }}>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+                {chunk.slice(0, 3).map((img, i) => (
+                  <View key={`desc-prod-top-${offset + i}`} style={{ flex: 1 }}>
+                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
+                  </View>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {chunk.slice(3, 6).map((img, i) => (
+                  <View key={`desc-prod-bottom-${offset + i}`} style={{ flex: 1 }}>
+                    <Image style={{ width: '100%', height: 150, objectFit: 'cover' }} src={img!} />
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Page>
+        );
+      }
+      return pages;
+    })()}
 
     {/* Economic Offer: main quote page */}
     <Page size="A4" style={styles.page}>
-      <View style={styles.header}>
-        <View style={styles.companyInfo}>
-          <Text style={styles.companyName}>{settings.companyName}</Text>
-          <Text>{settings.companyAddress}</Text>
-          <Text>P.IVA: {settings.companyVat}</Text>
-          <Text>{settings.companyEmail}</Text>
-          <Text>{settings.companyPhone}</Text>
-        </View>
-        <View style={styles.titleSection}>
-          {(settings.logoData || settings.logoUrl) && (
-            <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
-          )}
-          <Text style={styles.quoteMeta}>N. {displayNumber}</Text>
-          <Text style={styles.quoteMeta}>Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
-        </View>
-      </View>
+      {renderHeader()}
       <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. Offerta economica</Text>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.companyInfo}>
-          <Text style={styles.companyName}>{settings.companyName}</Text>
-          <Text>{settings.companyAddress}</Text>
-          <Text>P.IVA: {settings.companyVat}</Text>
-          <Text>{settings.companyEmail}</Text>
-          <Text>{settings.companyPhone}</Text>
-        </View>
-        <View style={styles.titleSection}>
-          {(settings.logoData || settings.logoUrl) && (
-            <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
-          )}
-          <Text style={styles.quoteMeta}>N. {displayNumber}</Text>
-          <Text style={styles.quoteMeta}>Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
-        </View>
-      </View>
 
       {/* Customer */}
       <View style={styles.customerSection}>
@@ -407,12 +464,27 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text>{settings.bankInfo}</Text>
         </View>
       )}
+      {/* Conditions inline below economic offer */}
+      {(quote.conditionsList && quote.conditionsList.length > 0) && (
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>4. Condizioni di fornitura</Text>
+          <View>
+            {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (
+              <View key={`cond-inline-${idx}`} style={{ flexDirection: 'row', marginBottom: 6 }}>
+                <Text style={{ marginRight: 6 }}>•</Text>
+                <Text style={styles.attachmentText}>{cond}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* Footer */}
       <Text style={styles.footer}>
         {settings.companyName} - {settings.companyAddress} - P.IVA {settings.companyVat}
       </Text>
     </Page>
+    
     
     {/* Attachments with customizable layout */}
     {!attachmentsBefore && attachments.map((att, idx) => {
@@ -429,12 +501,16 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       if (layout.fullPageImage && att.imageData) {
         return (
           <Page key={`att-${idx}`} size="A4" style={styles.fullImagePage}>
-            <Image style={styles.fullImage} src={att.imageData} />
+            {renderHeader()}
+            <View style={styles.imageFillContainer}>
+              <Image style={styles.fullImage} src={att.imageData} />
+            </View>
           </Page>
         );
       } else {
         return (
           <Page key={`att-${idx}`} size="A4" style={styles.attachmentPage}>
+            {renderHeader()}
             {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
             {pos === 'left' || pos === 'right' ? (
               <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -467,6 +543,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {/* Contract Pages at end */}
     {contractPages.map((pageText, idx) => (
       <Page key={`contract-${idx}`} size="A4" style={styles.contractPage}>
+        {renderHeader()}
         <Text style={styles.contractText}>{pageText}</Text>
       </Page>
     ))}

@@ -41,9 +41,17 @@ export const NewQuote: React.FC = () => {
       tocText: '',
       premessaText: '',
       premessaHardwareImages: [],
+      premessaHardwareImageCount: 0,
       softwareText: '',
       softwareImages: [],
+      softwareImageCount: 0,
       targetAudienceImages: [],
+      targetAudienceImageCount: 0,
+      descrizioneProdottiText: '',
+      descrizioneProdottiImages: [],
+      descrizioneProdottiImageCount: 0,
+      conditionsList: [],
+      conditionsCount: 0,
       subtotal: 0,
       vatTotal: 0,
       total: 0,
@@ -128,6 +136,18 @@ export const NewQuote: React.FC = () => {
     arr[idx] = dataUrl;
     setValue('premessaHardwareImages', arr, { shouldDirty: true });
   };
+  const hwCount = watch('premessaHardwareImageCount') || 0;
+  useEffect(() => {
+    const current = getValues('premessaHardwareImages') || [];
+    if (hwCount > current.length) {
+      setValue('premessaHardwareImages', [
+        ...current,
+        ...Array(hwCount - current.length).fill('')
+      ], { shouldDirty: true });
+    } else if (hwCount < current.length) {
+      setValue('premessaHardwareImages', current.slice(0, hwCount), { shouldDirty: true });
+    }
+  }, [hwCount]);
   const onSoftwareImageChange = async (idx: number, file?: File) => {
     if (!file) return;
     const dataUrl = await toBase64(file);
@@ -135,6 +155,18 @@ export const NewQuote: React.FC = () => {
     arr[idx] = dataUrl;
     setValue('softwareImages', arr, { shouldDirty: true });
   };
+  const swCount = watch('softwareImageCount') || 0;
+  useEffect(() => {
+    const current = getValues('softwareImages') || [];
+    if (swCount > current.length) {
+      setValue('softwareImages', [
+        ...current,
+        ...Array(swCount - current.length).fill('')
+      ], { shouldDirty: true });
+    } else if (swCount < current.length) {
+      setValue('softwareImages', current.slice(0, swCount), { shouldDirty: true });
+    }
+  }, [swCount]);
   const onTargetAudienceImageChange = async (idx: number, file?: File) => {
     if (!file) return;
     const dataUrl = await toBase64(file);
@@ -142,6 +174,50 @@ export const NewQuote: React.FC = () => {
     arr[idx] = dataUrl;
     setValue('targetAudienceImages', arr, { shouldDirty: true });
   };
+  const audCount = watch('targetAudienceImageCount') || 0;
+  useEffect(() => {
+    const current = getValues('targetAudienceImages') || [];
+    if (audCount > current.length) {
+      setValue('targetAudienceImages', [
+        ...current,
+        ...Array(audCount - current.length).fill('')
+      ], { shouldDirty: true });
+    } else if (audCount < current.length) {
+      setValue('targetAudienceImages', current.slice(0, audCount), { shouldDirty: true });
+    }
+  }, [audCount]);
+  const onDescrizioneProdottiImageChange = async (idx: number, file?: File) => {
+    if (!file) return;
+    const dataUrl = await toBase64(file);
+    const arr = getValues('descrizioneProdottiImages') || [];
+    arr[idx] = dataUrl;
+    setValue('descrizioneProdottiImages', arr, { shouldDirty: true });
+  };
+
+  const descrizioneCount = watch('descrizioneProdottiImageCount') || 0;
+  useEffect(() => {
+    const current = getValues('descrizioneProdottiImages') || [];
+    if (descrizioneCount > current.length) {
+      setValue('descrizioneProdottiImages', [
+        ...current,
+        ...Array(descrizioneCount - current.length).fill('')
+      ], { shouldDirty: true });
+    } else if (descrizioneCount < current.length) {
+      setValue('descrizioneProdottiImages', current.slice(0, descrizioneCount), { shouldDirty: true });
+    }
+  }, [descrizioneCount]);
+  const conditionsCount = watch('conditionsCount') || 0;
+  useEffect(() => {
+    const current = getValues('conditionsList') || [];
+    if (conditionsCount > current.length) {
+      setValue('conditionsList', [
+        ...current,
+        ...Array(conditionsCount - current.length).fill('')
+      ], { shouldDirty: true });
+    } else if (conditionsCount < current.length) {
+      setValue('conditionsList', current.slice(0, conditionsCount), { shouldDirty: true });
+    }
+  }, [conditionsCount]);
 
   useEffect(() => {
     (async () => {
@@ -159,12 +235,19 @@ export const NewQuote: React.FC = () => {
         if (last.premessaText) setValue('premessaText', last.premessaText);
         if (last.premessaHardwareImages) setValue('premessaHardwareImages', last.premessaHardwareImages);
         if (last.premessaHardwareImageHeight) setValue('premessaHardwareImageHeight', last.premessaHardwareImageHeight);
+        if (last.premessaHardwareImageCount) setValue('premessaHardwareImageCount', last.premessaHardwareImageCount);
         if (last.softwareText) setValue('softwareText', last.softwareText);
         if (last.softwareImages) setValue('softwareImages', last.softwareImages);
         if (last.softwareImageHeight) setValue('softwareImageHeight', last.softwareImageHeight);
+        if (last.softwareImageCount) setValue('softwareImageCount', last.softwareImageCount);
         if (last.targetAudienceImages) setValue('targetAudienceImages', last.targetAudienceImages);
         if (last.targetAudienceImageHeight) setValue('targetAudienceImageHeight', last.targetAudienceImageHeight);
+        if (last.targetAudienceImageCount) setValue('targetAudienceImageCount', last.targetAudienceImageCount);
         if (last.descrizioneProdottiText) setValue('descrizioneProdottiText', last.descrizioneProdottiText);
+        if (last.descrizioneProdottiImages) setValue('descrizioneProdottiImages', last.descrizioneProdottiImages);
+        if (last.descrizioneProdottiImageCount) setValue('descrizioneProdottiImageCount', last.descrizioneProdottiImageCount);
+        if (last.conditionsList) setValue('conditionsList', last.conditionsList);
+        if (last.conditionsCount) setValue('conditionsCount', last.conditionsCount);
       } catch (e) {
         logDexieError('Load last quote defaults failed', e);
       }
@@ -358,12 +441,19 @@ export const NewQuote: React.FC = () => {
                           premessaText: getValues('premessaText') || '',
                           premessaHardwareImages: getValues('premessaHardwareImages') || [],
                           premessaHardwareImageHeight: getValues('premessaHardwareImageHeight') || undefined,
+                          premessaHardwareImageCount: getValues('premessaHardwareImageCount') || 0,
                           softwareText: getValues('softwareText') || '',
                           softwareImages: getValues('softwareImages') || [],
                           softwareImageHeight: getValues('softwareImageHeight') || undefined,
+                          softwareImageCount: getValues('softwareImageCount') || 0,
                           targetAudienceImages: getValues('targetAudienceImages') || [],
                           targetAudienceImageHeight: getValues('targetAudienceImageHeight') || undefined,
+                          targetAudienceImageCount: getValues('targetAudienceImageCount') || 0,
                           descrizioneProdottiText: getValues('descrizioneProdottiText') || '',
+                          descrizioneProdottiImages: getValues('descrizioneProdottiImages') || [],
+                          descrizioneProdottiImageCount: getValues('descrizioneProdottiImageCount') || 0,
+                          conditionsList: getValues('conditionsList') || [],
+                          conditionsCount: getValues('conditionsCount') || 0,
                           subtotal: getValues('subtotal') || 0,
                           vatTotal: getValues('vatTotal') || 0,
                           total: getValues('total') || 0,
@@ -558,9 +648,21 @@ export const NewQuote: React.FC = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">Hardware</label>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Premessa - Immagini Hardware (6)</label>
+                <div className="flex items-center space-x-3 mb-3">
+                  <select
+                    {...register('premessaHardwareImageCount' as const, { valueAsNumber: true })}
+                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                      <option key={`hw-count-${n}`} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">Numero immagini hardware</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {[0,1,2,3,4,5].map(i => (
+                  {Array.from({ length: hwCount }).map((_, i) => (
                     <input
                       key={`hw-${i}`}
                       type="file"
@@ -581,6 +683,9 @@ export const NewQuote: React.FC = () => {
                 </div>
               </div>
               <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">Software</label>
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Descrizione</label>
                 <textarea
                   {...register('softwareText' as const)}
@@ -591,8 +696,19 @@ export const NewQuote: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Immagini (6)</label>
+                <div className="flex items-center space-x-3 mb-3">
+                  <select
+                    {...register('softwareImageCount' as const, { valueAsNumber: true })}
+                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                      <option key={`sw-count-${n}`} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">Numero immagini software</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {[0,1,2,3,4,5].map(i => (
+                  {Array.from({ length: swCount }).map((_, i) => (
                     <input
                       key={`sw-${i}`}
                       type="file"
@@ -613,9 +729,23 @@ export const NewQuote: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo - Immagini (9)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">A chi ci rivolgiamo</label>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo - Immagini</label>
+                <div className="flex items-center space-x-3 mb-3">
+                  <select
+                    {...register('targetAudienceImageCount' as const, { valueAsNumber: true })}
+                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
+                      <option key={`aud-count-${n}`} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">Numero immagini target</span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  {[0,1,2,3,4].map(i => (
+                  {Array.from({ length: Math.min(audCount, 5) }).map((_, i) => (
                     <input
                       key={`aud-top-${i}`}
                       type="file"
@@ -626,16 +756,29 @@ export const NewQuote: React.FC = () => {
                   ))}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
-                  {[5,6,7,8].map(i => (
+                  {Array.from({ length: Math.max(Math.min(audCount - 5, 5), 0) }).map((_, i) => (
                     <input
                       key={`aud-bottom-${i}`}
                       type="file"
                       accept="image/*"
-                      onChange={(e) => onTargetAudienceImageChange(i, e.target.files?.[0])}
+                      onChange={(e) => onTargetAudienceImageChange(5 + i, e.target.files?.[0])}
                       className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
                     />
                   ))}
                 </div>
+                {audCount > 10 && (
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
+                    {Array.from({ length: Math.min(audCount - 10, 5) }).map((_, i) => (
+                      <input
+                        key={`aud-third-${i}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => onTargetAudienceImageChange(10 + i, e.target.files?.[0])}
+                        className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                      />
+                    ))}
+                  </div>
+                )}
                 <div className="mt-2">
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini (px)</label>
                   <input
@@ -654,6 +797,63 @@ export const NewQuote: React.FC = () => {
                   className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
                   placeholder="Descrizione dettagliata dei prodotti..."
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Immagini pagina intera (1–10)</label>
+                <div className="flex items-center space-x-3">
+                  <select
+                    {...register('descrizioneProdottiImageCount' as const, { valueAsNumber: true })}
+                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    {[0,1,2,3,4,5,6,7,8,9,10].map(n => (
+                      <option key={`count-${n}`} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">Numero pagine immagini a piena pagina</span>
+                </div>
+                {descrizioneCount > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    {Array.from({ length: descrizioneCount }).map((_, i) => (
+                      <div key={`desc-prod-img-${i}`}>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Immagine {i + 1}</label>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => onDescrizioneProdottiImageChange(i, e.target.files?.[0])}
+                          className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">4. Condizioni di fornitura</label>
+                <div className="flex items-center space-x-3 mb-3">
+                  <select
+                    {...register('conditionsCount' as const, { valueAsNumber: true })}
+                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                  >
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+                      <option key={`cond-count-${n}`} value={n}>{n}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-slate-500">Numero voci condizioni</span>
+                </div>
+                {conditionsCount > 0 && (
+                  <div className="space-y-3">
+                    {Array.from({ length: conditionsCount }).map((_, i) => (
+                      <div key={`cond-item-${i}`}>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">Voce {i + 1}</label>
+                        <input
+                          {...register(`conditionsList.${i}` as const)}
+                          className="w-full rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
+                          placeholder="Inserisci condizione..."
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
