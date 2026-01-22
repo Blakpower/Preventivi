@@ -1,12 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Dexie from 'dexie';
 import { supabase, getCurrentUserId } from '../db';
 
 export const MigrationTool: React.FC = () => {
   const [status, setStatus] = useState<string>('Ready to migrate');
   const [dbName, setDbName] = useState('PreventiviDB');
+  const [availableDbs, setAvailableDbs] = useState<string[]>([]);
   const [isMigrating, setIsMigrating] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    // List available databases to help user choose
+    const listDbs = async () => {
+      try {
+        if (window.indexedDB && window.indexedDB.databases) {
+          const dbs = await window.indexedDB.databases();
+          const names = dbs.map(db => db.name).filter((n): n is string => !!n);
+          setAvailableDbs(names);
+          // If PreventiviDB is not in the list but others are, maybe default to the first one?
+          if (names.length > 0 && !names.includes('PreventiviDB')) {
+             // setDbName(names[0]); // Optional: auto-select first found
+          }
+        } else {
+          // Fallback for browsers not supporting databases()
+          // Dexie.getDatabaseNames() might work if available
+          const names = await Dexie.getDatabaseNames();
+          setAvailableDbs(names);
+        }
+      } catch (e) {
+        console.error("Could not list databases", e);
+      }
+    };
+    listDbs();
+  }, []);
 
   const addLog = (msg: string) => setLogs(prev => [...prev, msg]);
 
@@ -191,18 +217,39 @@ export const MigrationTool: React.FC = () => {
         Questo renderà i tuoi preventivi visibili su tutti i dispositivi.
       </p>
       
-      <div className="flex gap-4 mb-4">
-        <input 
-            type="text" 
-            value={dbName} 
-            onChange={(e) => setDbName(e.target.value)}
-            className="border border-slate-300 rounded px-3 py-2"
-            placeholder="Nome Database (es. PreventiviDB)"
-        />
+      <div className="flex gap-4 mb-4 items-end">
+        <div className="flex-1">
+          <label className="block text-sm font-semibold text-slate-700 mb-1">Nome Database Locale</label>
+          <div className="relative">
+            <input 
+                type="text" 
+                value={dbName} 
+                onChange={(e) => setDbName(e.target.value)}
+                className="block w-full rounded border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2 px-3"
+                placeholder="es. PreventiviDB"
+            />
+            {availableDbs.length > 0 && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 shadow-lg mt-1 rounded-md z-10 max-h-40 overflow-auto">
+                <div className="text-xs font-semibold text-slate-500 px-3 py-2 bg-slate-50">Database rilevati:</div>
+                {availableDbs.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => setDbName(name)}
+                    className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 text-slate-700"
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 mt-1">Seleziona il database da cui importare i dati.</p>
+        </div>
+        
         <button
             onClick={migrate}
             disabled={isMigrating}
-            className={`px-4 py-2 rounded text-white font-medium ${isMigrating ? 'bg-slate-400' : 'bg-green-600 hover:bg-green-700'}`}
+            className={`px-6 py-2 rounded text-white font-medium h-10 mb-[1px] ${isMigrating ? 'bg-slate-400' : 'bg-green-600 hover:bg-green-700'}`}
         >
             {isMigrating ? 'Migrazione in corso...' : 'Avvia Migrazione'}
         </button>
