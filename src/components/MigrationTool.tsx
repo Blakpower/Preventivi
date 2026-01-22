@@ -105,20 +105,38 @@ export const MigrationTool: React.FC = () => {
       addLog('Migrating Settings...');
       const settings = await db.table('settings').toArray();
       if (settings.length > 0) {
-        // Assume one settings object per user usually, but here we just take the first one found?
-        // Or all of them?
-        // Likely there's only one relevant settings object.
         const s = settings[0];
+        // Remove old ID and any local userId.
+        // We will associate with the current logged-in Supabase user.
         const { id: oldId, userId, ...rest } = s;
-        // We replace userId with current uid
-        const { error } = await supabase
+
+        // Check if settings already exist for this user in Supabase
+        const { data: existingSettings } = await supabase
           .from('settings')
-          .insert({ ...rest, userId: uid });
+          .select('id')
+          .eq('userId', uid)
+          .maybeSingle(); // Use maybeSingle to avoid error if 0 rows
+
+        let error;
+        if (existingSettings) {
+          addLog('Updating existing settings in cloud...');
+          const { error: updateError } = await supabase
+            .from('settings')
+            .update({ ...rest })
+            .eq('id', existingSettings.id);
+          error = updateError;
+        } else {
+          addLog('Inserting new settings to cloud...');
+          const { error: insertError } = await supabase
+            .from('settings')
+            .insert({ ...rest, userId: uid });
+          error = insertError;
+        }
           
         if (error) addLog(`Error migrating settings: ${error.message}`);
-        else addLog('Settings migrated.');
+        else addLog('Settings migrated successfully.');
       } else {
-        addLog('No settings found.');
+        addLog('No local settings found to migrate.');
       }
 
       // Migrate Quotes
