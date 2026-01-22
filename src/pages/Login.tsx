@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db, verifyPassword, setCurrentUserId } from '../db';
+import { supabase, verifyPassword, setCurrentUserId } from '../db';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -12,8 +12,13 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     try {
-      const user = await db.table('users').where('username').equals(username).first();
-      if (!user) {
+      const { data: user, error: dbError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .single();
+      
+      if (dbError || !user) {
         setError('Utente non trovato');
         return;
       }

@@ -1,29 +1,68 @@
-import React from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
+import React, { useEffect, useState } from 'react';
+import { supabase, type Quote, getCurrentUserId } from '../db';
 import { FileText, Database, TrendingUp, ArrowUpRight, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
 export const Dashboard: React.FC = () => {
-  const stats = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      const uid = getCurrentUserId();
-      const quotes = await db.quotes.where('ownerUserId').equals(uid || -1).toArray();
-      const quotesCount = quotes.length;
-      const articlesCount = await db.articles.count();
-      const totalValue = quotes.reduce((acc, q) => acc + q.total, 0);
-      const recentQuotes = quotes
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5);
-      
-      return { quotesCount, articlesCount, totalValue, recentQuotes };
-    } catch (error) {
-      logDexieError('Dexie dashboard query failed:', error);
-      return { quotesCount: 0, articlesCount: 0, totalValue: 0, recentQuotes: [] as Quote[] };
-    }
+  const [stats, setStats] = useState({
+    quotesCount: 0,
+    articlesCount: 0,
+    totalValue: 0,
+    recentQuotes: [] as Quote[]
   });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const uid = getCurrentUserId();
+      if (!uid) return;
+
+      // Fetch quotes for stats and recent list
+      // We'll fetch all totals for sum, but only full details for recent 5
+      // Optimally:
+      // 1. Count and Sum: Fetch all 'total'
+      // 2. Recent: Fetch top 5
+      
+      const { data: allQuotesData, error: quotesError } = await supabase
+        .from('quotes')
+        .select('total, createdAt')
+        .eq('ownerUserId', uid);
+
+      const quotesCount = allQuotesData?.length || 0;
+      const totalValue = allQuotesData?.reduce((acc, q) => acc + (q.total || 0), 0) || 0;
+
+      const { data: recentQuotesData, error: recentError } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('ownerUserId', uid)
+        .order('createdAt', { ascending: false })
+        .limit(5);
+
+      const recentQuotes = (recentQuotesData || []).map((q: any) => ({
+        ...q,
+        date: new Date(q.date),
+        createdAt: new Date(q.createdAt)
+      }));
+
+      // Fetch articles count
+      const { count: articlesCount, error: articlesError } = await supabase
+        .from('articles')
+        .select('*', { count: 'exact', head: true })
+        .eq('ownerUserId', uid);
+
+      if (quotesError) console.error(quotesError);
+      if (recentError) console.error(recentError);
+      if (articlesError) console.error(articlesError);
+
+      setStats({
+        quotesCount,
+        articlesCount: articlesCount || 0,
+        totalValue,
+        recentQuotes
+      });
+    };
+    fetchStats();
+  }, []);
 
   if (!stats) return <div className="p-8 text-center text-slate-500">Caricamento dashboard...</div>;
 

@@ -1,4 +1,5 @@
-import Dexie, { type Table } from 'dexie';
+import { supabase } from './lib/supabase';
+export { supabase };
 
 export interface User {
   id?: number;
@@ -17,6 +18,7 @@ export interface Customer {
   phone?: string;
   pec?: string;
   recipientCode?: string;
+  ownerUserId?: number;
 }
 
 export interface Article {
@@ -26,6 +28,7 @@ export interface Article {
   unitPrice: number;
   unit: string;
   vat: number;
+  ownerUserId?: number;
 }
 
 export interface QuoteItem {
@@ -131,101 +134,17 @@ export interface Settings {
   };
 }
 
-export class MyDatabase extends Dexie {
-  users!: Table<User>;
-  articles!: Table<Article>;
-  customers!: Table<Customer>;
-  quotes!: Table<Quote>;
-  settings!: Table<Settings>;
-
-  constructor() {
-    super('PreventiviManager');
-    this.version(1).stores({
-      articles: '++id, code, description',
-      quotes: '++id, number, date, customerName',
-      settings: '++id'
-    });
-    this.version(2).stores({
-      articles: '++id, code, description',
-      quotes: '++id, number, date, customerName, createdAt',
-      settings: '++id'
-    });
-    this.version(3).stores({
-      users: '++id, username',
-      articles: '++id, code, description',
-      quotes: '++id, number, date, customerName, createdAt, ownerUserId',
-      settings: '++id, userId'
-    }).upgrade(async (tx) => {
-      const users = tx.table<User>('users');
-      const quotes = tx.table<Quote>('quotes');
-      const settings = tx.table<Settings>('settings');
-      const existingUsers = await users.count();
-      if (existingUsers === 0) {
-        await users.add({
-          username: 'admin',
-          displayName: 'Admin',
-          email: '',
-          passwordHash: 'admin'
-        });
-      }
-      const admin = await users.where('username').equals('admin').first();
-      if (admin) {
-        await quotes.toCollection().modify(q => {
-          if (!q.ownerUserId) q.ownerUserId = admin.id!;
-        });
-        await settings.toCollection().modify(s => {
-          if (!s.userId) s.userId = admin.id!;
-        });
-      }
-    });
-    this.version(4).stores({
-      users: '++id, username',
-      articles: '++id, code, description',
-      customers: '++id, name, vat',
-      quotes: '++id, number, date, customerName, createdAt, ownerUserId, customerId',
-      settings: '++id, userId'
-    });
-  }
+// Helper to get current user ID
+const CURRENT_USER_KEY = 'currentUserId';
+export function getCurrentUserId(): number | null {
+  const raw = localStorage.getItem(CURRENT_USER_KEY);
+  return raw ? Number(raw) : null;
 }
-
-export const db = new MyDatabase();
-
-// Initialize settings if empty
-db.on('populate', () => {
-  db.users.add({
-    username: 'admin',
-    displayName: 'Admin',
-    email: '',
-    passwordHash: 'admin'
-  }).then(async (id) => {
-    await db.settings.add({
-      userId: id!,
-      companyName: 'La Mia Azienda',
-      companyAddress: 'Via Roma 1, 00100 Roma',
-      companyVat: '12345678901',
-      companyEmail: 'info@azienda.it',
-      companyPec: 'pec@azienda.it',
-      companyPhone: '06 123456',
-      companyRecipientCode: 'XXXXXXX',
-      bankInfo: 'IBAN: IT00 X 00000 00000 000000000000',
-      nextQuoteNumber: 1,
-      quoteNumberPrefix: new Date().getFullYear() + '-',
-      defaultVat: 22
-    });
-  });
-});
-
-export async function ensureDbOpen() {
-  if (!db.isOpen()) {
-    await db.open();
-  }
-}
-
-export function logDexieError(context: string, error: unknown) {
-  if (error instanceof Error) {
-    console.error(context, error.name, error.message, error);
+export function setCurrentUserId(userId: number | null) {
+  if (userId == null) {
+    localStorage.removeItem(CURRENT_USER_KEY);
   } else {
-    console.error(context, error);
+    localStorage.setItem(CURRENT_USER_KEY, String(userId));
   }
 }
 
@@ -243,27 +162,8 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   return storedHash === hash || storedHash === password;
 }
 
-const CURRENT_USER_KEY = 'currentUserId';
-export function getCurrentUserId(): number | null {
-  const raw = localStorage.getItem(CURRENT_USER_KEY);
-  return raw ? Number(raw) : null;
+// Deprecated helpers for compatibility during refactor
+export function ensureDbOpen() { return Promise.resolve(); }
+export function logDexieError(context: string, error: unknown) {
+  console.error(context, error);
 }
-export function setCurrentUserId(userId: number | null) {
-  if (userId == null) {
-    localStorage.removeItem(CURRENT_USER_KEY);
-  } else {
-    localStorage.setItem(CURRENT_USER_KEY, String(userId));
-  }
-}
-
-db.open().catch(async (error) => {
-  console.error('IndexedDB open failed:', error);
-  try {
-    db.close();
-    await Dexie.delete(db.name);
-    await db.open();
-    console.warn('IndexedDB reset and reopened');
-  } catch (e) {
-    console.error('IndexedDB recovery failed:', e);
-  }
-});

@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type User, hashPassword } from '../db';
+import React, { useState, useEffect } from 'react';
+import { supabase, hashPassword } from '../db';
+import type { User } from '../db';
 import { Plus, Trash2 } from 'lucide-react';
 
 export const Users: React.FC = () => {
-  const users = useLiveQuery(async () => {
-    return await db.table<User>('users').toArray();
-  }, []);
-
+  const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState({ username: '', displayName: '', email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) console.error('Error fetching users:', error);
+    else setUsers(data || []);
+  };
 
   const createUser = async () => {
     setError(null);
@@ -18,19 +25,32 @@ export const Users: React.FC = () => {
         setError('Compila username, nome visualizzato e password');
         return;
       }
-      const exists = await db.table<User>('users').where('username').equals(form.username).first();
-      if (exists) {
+      
+      // Check if user exists
+      // .single() returns error if no rows found or multiple rows found
+      // so we handle it carefully
+      const { data: existingUsers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('username', form.username);
+
+      if (existingUsers && existingUsers.length > 0) {
         setError('Username già esistente');
         return;
       }
+
       const passwordHash = await hashPassword(form.password);
-      await db.table<User>('users').add({
+      const { error: insertError } = await supabase.from('users').insert({
         username: form.username,
         displayName: form.displayName,
         email: form.email,
         passwordHash
       });
+
+      if (insertError) throw insertError;
+
       setForm({ username: '', displayName: '', email: '', password: '' });
+      fetchUsers();
     } catch (err) {
       console.error(err);
       setError('Errore durante la creazione utente');
@@ -38,7 +58,11 @@ export const Users: React.FC = () => {
   };
 
   const deleteUser = async (id: number) => {
-    await db.table<User>('users').delete(id);
+    if (confirm('Sei sicuro di voler eliminare questo utente?')) {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) console.error(error);
+      else fetchUsers();
+    }
   };
 
   return (
@@ -95,7 +119,7 @@ export const Users: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {(users || []).map(u => (
+              {users.map(u => (
                 <tr key={u.id}>
                   <td className="p-3">{u.username}</td>
                   <td className="p-3">{u.displayName}</td>
@@ -110,7 +134,7 @@ export const Users: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {(users || []).length === 0 && (
+              {users.length === 0 && (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-500">Nessun utente registrato.</td>
                 </tr>

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Article, ensureDbOpen, logDexieError } from '../db';
+import React, { useState, useEffect } from 'react';
+import { supabase, type Article, getCurrentUserId } from '../db';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
 import { ArticleForm } from '../components/ArticleForm';
 
@@ -8,38 +7,76 @@ export const Articles: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | undefined>(undefined);
   const [search, setSearch] = useState('');
+  const [articles, setArticles] = useState<Article[]>([]);
 
-  const articles = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
+  useEffect(() => {
+    const fetchArticles = async () => {
+      const uid = getCurrentUserId();
+      if (!uid) return;
+
+      let query = supabase
+        .from('articles')
+        .select('*')
+        .eq('ownerUserId', uid)
+        .order('code', { ascending: true });
+
       if (search) {
-        return await db.articles
-          .filter(a => 
-            a.code.toLowerCase().includes(search.toLowerCase()) || 
-            a.description.toLowerCase().includes(search.toLowerCase())
-          )
-          .toArray();
+        query = query.or(`code.ilike.%${search}%,description.ilike.%${search}%`);
       }
-      return await db.articles.toArray();
-    } catch (error) {
-      logDexieError('Dexie articles query failed:', error);
-      return [];
-    }
-  }, [search]);
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching articles:', error);
+      } else {
+        setArticles(data || []);
+      }
+    };
+    fetchArticles();
+  }, [search]); // Note: In real app, might want to debounce search or refresh on edit/add
+
+  const refreshArticles = async () => {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+    const { data } = await supabase.from('articles').select('*').eq('ownerUserId', uid).order('code', { ascending: true });
+    if (data) setArticles(data);
+  };
 
   const handleSubmit = async (data: Omit<Article, 'id'>) => {
-    if (editingArticle && editingArticle.id) {
-      await db.articles.update(editingArticle.id, data);
-    } else {
-      await db.articles.add(data as Article);
+    try {
+      const uid = getCurrentUserId();
+      if (!uid) return;
+
+      if (editingArticle && editingArticle.id) {
+        const { error } = await supabase
+          .from('articles')
+          .update({ ...data, ownerUserId: uid })
+          .eq('id', editingArticle.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('articles')
+          .insert({ ...data, ownerUserId: uid });
+        if (error) throw error;
+      }
+      
+      await refreshArticles();
+      setIsFormOpen(false);
+      setEditingArticle(undefined);
+    } catch (error) {
+      console.error('Error saving article:', error);
+      alert('Errore durante il salvataggio');
     }
-    setIsFormOpen(false);
-    setEditingArticle(undefined);
   };
 
   const handleDelete = async (id: number) => {
     if (confirm('Sei sicuro di voler eliminare questo articolo?')) {
-      await db.articles.delete(id);
+      const { error } = await supabase.from('articles').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting article:', error);
+        alert('Errore durante l\'eliminazione');
+      } else {
+        setArticles(articles.filter(a => a.id !== id));
+      }
     }
   };
 

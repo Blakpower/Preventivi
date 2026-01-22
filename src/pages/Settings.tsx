@@ -1,22 +1,35 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Settings, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
+import { supabase, type Settings, getCurrentUserId } from '../db';
 import { Save, Building2, FileText, Wallet } from 'lucide-react';
+import { MigrationTool } from '../components/MigrationTool';
 
 export const SettingsPage: React.FC = () => {
-  const settings = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      const uid = getCurrentUserId();
-      if (!uid) return undefined;
-      const row = await db.settings.where('userId').equals(uid).first();
-      return row;
-    } catch (error) {
-      logDexieError('Dexie settings query failed:', error);
-      return undefined;
-    }
-  });
+  const [settings, setSettings] = useState<Settings | undefined>();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const uid = getCurrentUserId();
+        if (!uid) return;
+        const { data } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('userId', uid)
+          .single();
+        
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const { register, handleSubmit, reset, setValue, watch, formState: { isDirty } } = useForm<Settings>();
 
@@ -59,12 +72,26 @@ export const SettingsPage: React.FC = () => {
     try {
       const uid = getCurrentUserId();
       if (!uid) return;
-      if (settings && settings.id) {
-        await db.settings.update(settings.id, { ...data, userId: uid });
+      
+      const payload = { ...data, userId: uid };
+      // Remove undefined fields
+      Object.keys(payload).forEach(key => payload[key as keyof Settings] === undefined && delete payload[key as keyof Settings]);
+
+      if (settings?.id) {
+        const { error } = await supabase.from('settings').update(payload).eq('id', settings.id);
+        if (error) throw error;
         alert('Impostazioni salvate con successo!');
       } else {
-        await db.settings.add({ ...data, userId: uid });
+        const { error } = await supabase.from('settings').insert(payload);
+        if (error) throw error;
         alert('Impostazioni create con successo!');
+      }
+      
+      // Refresh
+      const { data: newData } = await supabase.from('settings').select('*').eq('userId', uid).single();
+      if (newData) {
+        setSettings(newData);
+        reset(newData);
       }
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -72,7 +99,8 @@ export const SettingsPage: React.FC = () => {
     }
   };
 
-  if (!settings) return <div className="p-8 text-center text-slate-500">Caricamento impostazioni...</div>;
+  if (loading) return <div className="p-8 text-center text-slate-500">Caricamento impostazioni...</div>;
+  if (!settings && !getCurrentUserId()) return <div className="p-8 text-center text-slate-500">Effettua il login per vedere le impostazioni.</div>;
 
   return (
     <div className="max-w-4xl mx-auto pb-24">
@@ -332,6 +360,8 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </form>
+      
+      <MigrationTool />
     </div>
   );
 };

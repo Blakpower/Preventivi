@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
+import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
 import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
@@ -11,37 +10,39 @@ import { QuotePDF } from '../components/QuotePDF';
 export const NewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const settings = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      const uid = getCurrentUserId();
-      if (!uid) return undefined;
-      const row = await db.settings.where('userId').equals(uid).first();
-      return row;
-    } catch (error) {
-      logDexieError('Dexie settings query failed:', error);
-      return undefined;
-    }
-  });
-  const articles = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      return await db.articles.toArray();
-    } catch (error) {
-      logDexieError('Dexie articles query failed:', error);
-      return [];
-    }
-  });
+  const [settings, setSettings] = useState<Settings | undefined>(undefined);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const customers = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      return await db.customers.toArray();
-    } catch (error) {
-      logDexieError('Dexie customers query failed:', error);
-      return [];
-    }
-  });
+  useEffect(() => {
+    const fetchData = async () => {
+      const uid = getCurrentUserId();
+      if (!uid) return;
+
+      // Settings
+      const { data: settingsData } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('userId', uid)
+        .single();
+      if (settingsData) setSettings(settingsData);
+
+      // Articles
+      const { data: articlesData } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('ownerUserId', uid);
+      if (articlesData) setArticles(articlesData);
+
+      // Customers
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('ownerUserId', uid);
+      if (customersData) setCustomers(customersData);
+    };
+    fetchData();
+  }, []);
 
   const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors }, clearErrors } = useForm<Quote>({
     defaultValues: {
@@ -90,11 +91,23 @@ export const NewQuote: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      db.quotes.get(Number(id)).then(quote => {
-        if (quote) {
-          reset(quote);
+      const fetchQuote = async () => {
+        const { data, error } = await supabase
+          .from('quotes')
+          .select('*')
+          .eq('id', Number(id))
+          .single();
+        if (data) {
+          // Map date string to Date object
+          reset({
+            ...data,
+            date: new Date(data.date)
+          });
+        } else if (error) {
+          console.error('Failed to load quote for edit', error);
         }
-      }).catch(err => logDexieError('Failed to load quote for edit', err));
+      };
+      fetchQuote();
     }
   }, [id, reset]);
 
@@ -284,15 +297,18 @@ export const NewQuote: React.FC = () => {
     (async () => {
       if (id) return;
       try {
-        await ensureDbOpen();
         const uid = getCurrentUserId();
         if (!uid) return;
-        const arr = await db.quotes.where('ownerUserId').equals(uid).toArray();
-        const last = arr.sort((a, b) => {
-          const av = a.createdAt ? new Date(a.createdAt).valueOf() : 0;
-          const bv = b.createdAt ? new Date(b.createdAt).valueOf() : 0;
-          return av - bv;
-        }).pop();
+        
+        const { data: quotes } = await supabase
+          .from('quotes')
+          .select('*')
+          .eq('ownerUserId', uid)
+          .order('createdAt', { ascending: false })
+          .limit(1);
+          
+        const last = quotes && quotes.length > 0 ? quotes[0] : null;
+
         if (!last) return;
         if (last.tocTextAbove) setValue('tocTextAbove', last.tocTextAbove);
         if (last.premessaText) setValue('premessaText', last.premessaText);
@@ -316,7 +332,7 @@ export const NewQuote: React.FC = () => {
         if (last.conditionsList) setValue('conditionsList', last.conditionsList);
         if (last.conditionsCount) setValue('conditionsCount', last.conditionsCount);
       } catch (e) {
-        logDexieError('Load last quote defaults failed', e);
+        console.error('Load last quote defaults failed', e);
       }
     })();
   }, [setValue]);
@@ -325,28 +341,56 @@ export const NewQuote: React.FC = () => {
     try {
       if (!settings) return;
 
+      const uid = getCurrentUserId();
+      if (!uid) {
+        alert('Utente non autenticato');
+        return;
+      }
+
+      // Prepare payload - ensure undefined values are removed or handled if needed
+      // Supabase handles JSON columns for arrays automatically if defined as jsonb in schema.
+      // My schema defined arrays as jsonb or text[]? 
+      // Based on schema.sql I created:
+      // items jsonb, attachments jsonb, premessaHardwareImages text[], etc.
+      // So passing arrays is fine.
+      
+      const payload: any = {
+        ...data,
+        ownerUserId: uid,
+      };
+      
+      // Remove id from payload if it exists, to avoid updating primary key (though Supabase ignores it usually)
+      delete payload.id;
+
       if (id) {
-        const existing = await db.quotes.get(Number(id));
-        if (existing) {
-          await db.quotes.put({ ...existing, ...data, id: Number(id) });
-        }
+        const { error } = await supabase
+          .from('quotes')
+          .update(payload)
+          .eq('id', Number(id));
+          
+        if (error) throw error;
       } else {
         const numberValue = data.number && String(data.number).trim() ? data.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
-        await db.quotes.add({
-          ...data,
-          number: numberValue,
-          ownerUserId: getCurrentUserId() || undefined,
-          createdAt: new Date()
-        });
+        payload.number = numberValue;
+        payload.createdAt = new Date();
+        
+        const { error } = await supabase
+          .from('quotes')
+          .insert(payload);
+          
+        if (error) throw error;
 
         // Update next quote number
-        await db.settings.update(settings.id!, {
-          nextQuoteNumber: settings.nextQuoteNumber + 1,
-          attachmentsDefaults: {
-            position: data.attachmentsPosition,
-            layout: data.attachments && data.attachments[0]?.layout ? data.attachments[0]?.layout : settings.attachmentsDefaults?.layout
-          }
-        });
+        await supabase
+          .from('settings')
+          .update({
+            nextQuoteNumber: settings.nextQuoteNumber + 1,
+            attachmentsDefaults: {
+              position: data.attachmentsPosition,
+              layout: data.attachments && data.attachments[0]?.layout ? data.attachments[0]?.layout : settings.attachmentsDefaults?.layout
+            }
+          })
+          .eq('id', settings.id);
       }
 
       navigate('/quotes');

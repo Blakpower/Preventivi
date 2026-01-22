@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
+import { supabase, type Quote, type Settings, getCurrentUserId } from '../db';
 import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
@@ -9,41 +8,67 @@ import { QuotePDF } from '../components/QuotePDF';
 
 export const Quotes: React.FC = () => {
   const [search, setSearch] = useState('');
-  const settings = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      const uid = getCurrentUserId();
-      if (!uid) return undefined;
-      return await db.settings.where('userId').equals(uid).first();
-    } catch (error) {
-      logDexieError('Dexie settings query failed:', error);
-      return undefined;
-    }
-  });
+  const [settings, setSettings] = useState<Settings | undefined>(undefined);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
 
-  const quotes = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
+  useEffect(() => {
+    const fetchSettings = async () => {
       const uid = getCurrentUserId();
-      const collection = db.quotes.where('ownerUserId').equals(uid || -1).reverse();
-    
+      if (!uid) return;
+      const { data } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('userId', uid)
+        .single();
+      if (data) setSettings(data);
+    };
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
+    const fetchQuotes = async () => {
+      const uid = getCurrentUserId();
+      if (!uid) return;
+      
+      let query = supabase
+        .from('quotes')
+        .select('*')
+        .eq('ownerUserId', uid)
+        .order('date', { ascending: false });
+
       if (search) {
-        const all = await collection.toArray();
-        return all.filter(q => 
-          q.customerName.toLowerCase().includes(search.toLowerCase()) || 
-          q.number.toLowerCase().includes(search.toLowerCase())
-        );
+        // Supabase text search is basic with 'ilike'. For multiple fields OR condition:
+        // .or(`customerName.ilike.%${search}%,number.ilike.%${search}%`)
+        query = query.or(`customerName.ilike.%${search}%,number.ilike.%${search}%`);
       }
-      return await collection.toArray();
-    } catch (error) {
-      logDexieError('Dexie quotes query failed:', error);
-      return [];
-    }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('Error fetching quotes:', error);
+      } else {
+        // Parse date strings back to Date objects if needed, 
+        // though usually strings are fine for display if we handle them.
+        // But the Quote interface likely expects Date objects for the 'date' field.
+        // Let's map them.
+        const typedQuotes = (data || []).map((q: any) => ({
+          ...q,
+          date: new Date(q.date)
+        }));
+        setQuotes(typedQuotes);
+      }
+    };
+    fetchQuotes();
   }, [search]);
 
   const handleDelete = async (id: number) => {
     if (confirm('Sei sicuro di voler eliminare questo preventivo?')) {
-      await db.quotes.delete(id);
+      const { error } = await supabase.from('quotes').delete().eq('id', id);
+      if (error) {
+        console.error('Error deleting quote:', error);
+        alert('Errore durante l\'eliminazione');
+      } else {
+        setQuotes(quotes.filter(q => q.id !== id));
+      }
     }
   };
 

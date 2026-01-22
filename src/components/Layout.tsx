@@ -1,18 +1,25 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FileText, Database, Settings, PlusCircle, Menu, Bell, Users } from 'lucide-react';
 import clsx from 'clsx';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, getCurrentUserId, setCurrentUserId, type User } from '../db';
+import { supabase, getCurrentUserId, setCurrentUserId, type User } from '../db';
 import { useNavigate } from 'react-router-dom';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const uid = getCurrentUserId();
-  const currentUser = useLiveQuery(async () => {
-    if (!uid) return undefined;
-    return await db.table<User>('users').get(uid);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (!uid) return;
+      const { data, error } = await supabase.from('users').select('*').eq('id', uid).single();
+      if (!error && data) {
+        setCurrentUser(data);
+      }
+    };
+    fetchUser();
   }, [uid]);
 
   const navItems = [

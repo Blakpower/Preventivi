@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Customer, ensureDbOpen, logDexieError } from '../db';
+import React, { useState, useEffect } from 'react';
+import { supabase, getCurrentUserId } from '../db';
+import type { Customer } from '../db';
 import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
 import { CustomerForm } from '../components/CustomerForm';
 
@@ -8,38 +8,52 @@ export const Customers: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>(undefined);
   const [search, setSearch] = useState('');
+  const [customers, setCustomers] = useState<Customer[]>([]);
 
-  const customers = useLiveQuery(async () => {
-    try {
-      await ensureDbOpen();
-      if (search) {
-        return await db.customers
-          .filter(c => 
-            c.name.toLowerCase().includes(search.toLowerCase()) || 
-            c.vat.includes(search)
-          )
-          .toArray();
-      }
-      return await db.customers.toArray();
-    } catch (error) {
-      logDexieError('Dexie customers query failed:', error);
-      return [];
-    }
+  useEffect(() => {
+    fetchCustomers();
   }, [search]);
 
-  const handleSubmit = async (data: Omit<Customer, 'id'>) => {
-    if (editingCustomer && editingCustomer.id) {
-      await db.customers.update(editingCustomer.id, data);
+  const fetchCustomers = async () => {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+
+    let query = supabase
+      .from('customers')
+      .select('*')
+      .eq('ownerUserId', uid)
+      .order('name', { ascending: true });
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,vat.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('Error fetching customers:', error);
     } else {
-      await db.customers.add(data as Customer);
+      setCustomers(data || []);
+    }
+  };
+
+  const handleSubmit = async (data: Omit<Customer, 'id'>) => {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+
+    if (editingCustomer && editingCustomer.id) {
+      await supabase.from('customers').update(data).eq('id', editingCustomer.id);
+    } else {
+      await supabase.from('customers').insert({ ...data, ownerUserId: uid });
     }
     setIsFormOpen(false);
     setEditingCustomer(undefined);
+    fetchCustomers();
   };
 
   const handleDelete = async (id: number) => {
     if (confirm('Sei sicuro di voler eliminare questo cliente?')) {
-      await db.customers.delete(id);
+      await supabase.from('customers').delete().eq('id', id);
+      fetchCustomers();
     }
   };
 
@@ -85,7 +99,7 @@ export const Customers: React.FC = () => {
             />
           </div>
           <div className="text-sm text-slate-500 font-medium bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
-            {customers?.length || 0} Clienti
+            {customers.length} Clienti
           </div>
         </div>
 
@@ -101,7 +115,7 @@ export const Customers: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {customers?.map((customer) => (
+              {customers.map((customer) => (
                 <tr key={customer.id} className="group hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -143,7 +157,7 @@ export const Customers: React.FC = () => {
                   </td>
                 </tr>
               ))}
-              {customers?.length === 0 && (
+              {customers.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400">
