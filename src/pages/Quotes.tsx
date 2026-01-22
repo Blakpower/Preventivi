@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
-import { Plus, Search, Trash2, Download, FileText, Calendar, User } from 'lucide-react';
+import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
@@ -156,6 +156,13 @@ export const Quotes: React.FC = () => {
                         <Download size={16} />
                         <span>PDF</span>
                       </button>
+                      <Link
+                        to={`/quotes/${quote.id}/edit`}
+                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Modifica"
+                      >
+                        <Edit size={18} />
+                      </Link>
                       <button
                         onClick={() => quote.id && handleDelete(quote.id)}
                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"

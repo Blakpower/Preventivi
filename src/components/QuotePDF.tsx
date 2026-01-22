@@ -470,6 +470,14 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       )}
 
+      <View style={{ marginTop: 30 }}>
+        <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
+        <View style={{ marginTop: 20, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 11, marginBottom: 30 }}>Firma per accettazione</Text>
+          <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
+        </View>
+      </View>
+
       {/* Footer */}
       <Text style={styles.footer}>
         {settings.companyName} - {settings.companyAddress} - P.IVA {settings.companyVat}

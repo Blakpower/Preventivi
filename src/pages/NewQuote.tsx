@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type Quote, ensureDbOpen, logDexieError, getCurrentUserId } from '../db';
 import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye } from 'lucide-react';
@@ -9,6 +9,7 @@ import { PDFViewer } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
 
 export const NewQuote: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const settings = useLiveQuery(async () => {
     try {
@@ -42,7 +43,7 @@ export const NewQuote: React.FC = () => {
     }
   });
 
-  const { register, control, handleSubmit, watch, setValue, getValues, formState: { errors }, clearErrors } = useForm<Quote>({
+  const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors }, clearErrors } = useForm<Quote>({
     defaultValues: {
       date: new Date(),
       items: [],
@@ -88,7 +89,17 @@ export const NewQuote: React.FC = () => {
   // Watch items to calculate totals (handled via recalcTotals in change handlers)
 
   useEffect(() => {
-    if (settings && !getValues('number')) {
+    if (id) {
+      db.quotes.get(Number(id)).then(quote => {
+        if (quote) {
+          reset(quote);
+        }
+      }).catch(err => logDexieError('Failed to load quote for edit', err));
+    }
+  }, [id, reset]);
+
+  useEffect(() => {
+    if (!id && settings && !getValues('number')) {
       setValue('number', `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`);
       if (settings.attachmentsDefaults?.position) {
         setValue('attachmentsPosition', settings.attachmentsDefaults.position);
@@ -271,6 +282,7 @@ export const NewQuote: React.FC = () => {
 
   useEffect(() => {
     (async () => {
+      if (id) return;
       try {
         await ensureDbOpen();
         const uid = getCurrentUserId();
@@ -313,22 +325,29 @@ export const NewQuote: React.FC = () => {
     try {
       if (!settings) return;
 
-      const numberValue = data.number && String(data.number).trim() ? data.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
-      await db.quotes.add({
-        ...data,
-        number: numberValue,
-        ownerUserId: getCurrentUserId() || undefined,
-        createdAt: new Date()
-      });
-
-      // Update next quote number
-      await db.settings.update(settings.id!, {
-        nextQuoteNumber: settings.nextQuoteNumber + 1,
-        attachmentsDefaults: {
-          position: data.attachmentsPosition,
-          layout: data.attachments && data.attachments[0]?.layout ? data.attachments[0]?.layout : settings.attachmentsDefaults?.layout
+      if (id) {
+        const existing = await db.quotes.get(Number(id));
+        if (existing) {
+          await db.quotes.put({ ...existing, ...data, id: Number(id) });
         }
-      });
+      } else {
+        const numberValue = data.number && String(data.number).trim() ? data.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
+        await db.quotes.add({
+          ...data,
+          number: numberValue,
+          ownerUserId: getCurrentUserId() || undefined,
+          createdAt: new Date()
+        });
+
+        // Update next quote number
+        await db.settings.update(settings.id!, {
+          nextQuoteNumber: settings.nextQuoteNumber + 1,
+          attachmentsDefaults: {
+            position: data.attachmentsPosition,
+            layout: data.attachments && data.attachments[0]?.layout ? data.attachments[0]?.layout : settings.attachmentsDefaults?.layout
+          }
+        });
+      }
 
       navigate('/quotes');
     } catch (error) {

@@ -32,6 +32,7 @@ function App() {
                   <Route path="/customers" element={<Customers />} />
                   <Route path="/quotes" element={<Quotes />} />
                   <Route path="/quotes/new" element={<NewQuote />} />
+                  <Route path="/quotes/:id/edit" element={<NewQuote />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/users" element={<Users />} />
                 </Routes>
