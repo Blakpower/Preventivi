@@ -213,6 +213,17 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       <View style={styles.separator} />
     </>
   );
+
+  const renderFooter = () => (
+    <View style={styles.footer} fixed>
+      <Text>Esse Group S.r.l. - Via Aurora, 4 - 95037 San Giovanni La Punta (CT) - P.IVA 04944360876</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 4 }}>
+        <Text>Prev. N. {displayNumber} - </Text>
+        <Text render={({ pageNumber, totalPages }) => `Pag. ${pageNumber} di ${totalPages}`} />
+      </View>
+    </View>
+  );
+
   return (
   <Document>
     {attachmentsBefore && attachments.map(/* render each */ (att, idx) => {
@@ -231,6 +242,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
             <View style={styles.imageFillContainer}>
               <Image style={styles.fullImage} src={att.imageData} />
             </View>
+            {renderFooter()}
           </Page>
         );
       }
@@ -251,6 +263,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
               {pos === 'bottom' && imageEl}
             </>
           )}
+          {renderFooter()}
         </Page>
       );
     })}
@@ -278,6 +291,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {quote.tocText && (
         <Text style={{ fontSize: 11, color: '#4b5563' }}>{quote.tocText}</Text>
       )}
+      {renderFooter()}
     </Page>
 
     {/* Premessa Page - Hardware + Software + Target Audience */}
@@ -294,6 +308,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           ) : null;
         })()}
       </View>
+      {renderFooter()}
     </Page>
     {/* Pagina Software + descrizione + Target Audience (stessa pagina, adattamento automatico) */}
     <Page size="A4" style={styles.attachmentPage}>
@@ -356,6 +371,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           ) : null;
         })()}
       
+      {renderFooter()}
     </Page>
 
     {/* Sezione 2 - Descrizione Prodotti con prima immagine nella stessa pagina */}
@@ -384,6 +400,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
               />
             </View>
           )}
+          {renderFooter()}
         </Page>
       );
       // Full-page image pages for remaining images
@@ -394,6 +411,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
             <View style={styles.imageFillContainer}>
               <Image style={[styles.fullImage, { objectFit: quote.descrizioneProdottiImageFit || 'contain' }]} src={img!} />
             </View>
+            {renderFooter()}
           </Page>
         );
       });
@@ -482,9 +500,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       </View>
 
       {/* Footer */}
-      <Text style={styles.footer}>
-        {settings.companyName} - {settings.companyAddress} - P.IVA {settings.companyVat}
-      </Text>
+      {renderFooter()}
     </Page>
     
     
@@ -547,6 +563,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       <Page key={`contract-${idx}`} size="A4" style={styles.contractPage}>
         {renderHeader()}
         <Text style={styles.contractText}>{pageText}</Text>
+        {renderFooter()}
       </Page>
     ))}
   </Document>
