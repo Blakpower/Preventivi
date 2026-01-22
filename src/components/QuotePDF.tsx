@@ -55,20 +55,22 @@ const styles = StyleSheet.create({
   customerSection: {
     marginTop: 20,
     marginBottom: 40,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#1e3a8a', // Dark blue
     padding: 15,
     borderRadius: 4,
+    color: '#ffffff',
   },
   customerTitle: {
     fontSize: 11,
     fontWeight: 'bold',
     marginBottom: 5,
-    color: '#6b7280',
+    color: '#ffffff',
   },
   customerName: {
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 2,
+    color: '#ffffff',
   },
   table: {
     width: '100%',
@@ -134,9 +136,10 @@ const styles = StyleSheet.create({
   bankInfo: {
     marginTop: 40,
     padding: 10,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: '#1e3a8a', // Dark blue
     borderRadius: 4,
     fontSize: 9,
+    color: '#ffffff',
   },
   attachmentPage: {
     padding: 30,
@@ -406,8 +409,8 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       <View style={styles.customerSection}>
         <Text style={styles.customerTitle}>DESTINATARIO</Text>
         <Text style={styles.customerName}>{quote.customerName}</Text>
-        <Text>{quote.customerAddress}</Text>
-        {quote.customerVat && <Text>P.IVA/CF: {quote.customerVat}</Text>}
+        <Text style={{ color: '#ffffff' }}>{quote.customerAddress}</Text>
+        {quote.customerVat && <Text style={{ color: '#ffffff' }}>P.IVA/CF: {quote.customerVat}</Text>}
       </View>
 
       {/* Items Table */}
@@ -451,8 +454,8 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {/* Bank Info */}
       {settings.bankInfo && (
         <View style={styles.bankInfo}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 2 }}>Coordinate Bancarie:</Text>
-          <Text>{settings.bankInfo}</Text>
+          <Text style={{ fontWeight: 'bold', marginBottom: 2, color: '#ffffff' }}>Coordinate Bancarie:</Text>
+          <Text style={{ color: '#ffffff' }}>{settings.bankInfo}</Text>
         </View>
       )}
       {/* Conditions inline below economic offer */}
