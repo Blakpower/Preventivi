@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
-import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins } from 'lucide-react';
 import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
+import { LeasingForm } from '../components/LeasingForm';
 
 export const NewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export const NewQuote: React.FC = () => {
   const [settings, setSettings] = useState<Settings | undefined>(undefined);
   const [articles, setArticles] = useState<Article[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showLeasing, setShowLeasing] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,6 +52,7 @@ export const NewQuote: React.FC = () => {
       items: [],
       attachments: [],
       attachmentsPosition: 'after',
+      leasing: undefined, // Default no leasing
       tocTextAbove: 'A proseguimento dei colloqui intercorsi siamo lieti di sottoporVi la ns. Migliore offerta relativa a quanto in oggetto, così articolata:',
       tocText: 'Nell\'augurarci che la presente possa fornirVi gli elementi necessari a valutare la qualità della ns. soluzione, Vi confermiamo la ns. completa disponibilità per ogni ulteriore chiarimento e, nel ringraziarVi per la Vs. preferenza, cogliamo l’occasione per porgerVi i ns. più cordiali saluti.',
       premessaText: 'La Esse Group SRL è un’Azienda formata da elementi con pluriennale esperienza nel settore Retail, e promuove la vendita di qualificati marchi, sia hardware che software, tra i quali:',
@@ -90,26 +93,59 @@ export const NewQuote: React.FC = () => {
   // Watch items to calculate totals (handled via recalcTotals in change handlers)
 
   useEffect(() => {
-    if (id) {
-      const fetchQuote = async () => {
-        const { data, error } = await supabase
-          .from('quotes')
-          .select('*')
-          .eq('id', Number(id))
-          .single();
-        if (data) {
-          // Map date string to Date object
-          reset({
-            ...data,
-            date: new Date(data.date)
-          });
-        } else if (error) {
-          console.error('Failed to load quote for edit', error);
+    const loadData = async () => {
+      const session = await supabase.auth.getSession();
+      
+      // If editing, load the quote
+      if (id) {
+        if (session.data.session) {
+          const { data, error } = await supabase
+            .from('quotes')
+            .select('*')
+            .eq('id', Number(id)) // Ensure number
+            .eq('ownerUserId', session.data.session.user.id) // Ensure we only get our own quote
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching quote:', error);
+            alert('Errore nel caricamento del preventivo: ' + error.message);
+          } else if (data) {
+            const quote = data as any; // Cast to any to handle JSON fields
+            const items = typeof quote.items === 'string' ? JSON.parse(quote.items) : quote.items;
+            const attachments = typeof quote.attachments === 'string' ? JSON.parse(quote.attachments) : quote.attachments;
+            const premessaHardwareImages = typeof quote.premessaHardwareImages === 'string' ? JSON.parse(quote.premessaHardwareImages) : quote.premessaHardwareImages;
+            const softwareImages = typeof quote.softwareImages === 'string' ? JSON.parse(quote.softwareImages) : quote.softwareImages;
+            const targetAudienceImages = typeof quote.targetAudienceImages === 'string' ? JSON.parse(quote.targetAudienceImages) : quote.targetAudienceImages;
+            const descrizioneProdottiImages = typeof quote.descrizioneProdottiImages === 'string' ? JSON.parse(quote.descrizioneProdottiImages) : quote.descrizioneProdottiImages;
+            const conditionsList = typeof quote.conditionsList === 'string' ? JSON.parse(quote.conditionsList) : quote.conditionsList;
+            const leasing = quote.leasing ? (typeof quote.leasing === 'string' ? JSON.parse(quote.leasing) : quote.leasing) : undefined;
+            
+            if (leasing) {
+              setShowLeasing(true);
+            }
+
+            reset({
+              ...quote,
+              date: new Date(quote.date),
+              items: items || [],
+              attachments: attachments || [],
+              premessaHardwareImages: premessaHardwareImages || [],
+              softwareImages: softwareImages || [],
+              targetAudienceImages: targetAudienceImages || [],
+              descrizioneProdottiImages: descrizioneProdottiImages || [],
+              conditionsList: conditionsList || [],
+              leasing: leasing,
+              attachmentsPosition: quote.attachmentsPosition || 'after'
+            });
+          } else {
+             alert('Preventivo non trovato.');
+             navigate('/');
+          }
         }
-      };
-      fetchQuote();
-    }
-  }, [id, reset]);
+      }
+    };
+    loadData();
+  }, [id, reset, navigate]);
 
   useEffect(() => {
     if (!id && settings && !getValues('number')) {
@@ -708,7 +744,42 @@ export const NewQuote: React.FC = () => {
           </div>
         </div>
         
-        {/* PDF Attachments Section */}
+        {/* PDF{/* Leasing Section Toggle */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-indigo-50 p-2 rounded-lg text-indigo-600">
+              <Coins size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800">Piano Leasing</h2>
+              <p className="text-sm text-slate-500">Aggiungi un piano di leasing al preventivo</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+                if (showLeasing) {
+                    setValue('leasing', undefined);
+                }
+                setShowLeasing(!showLeasing);
+            }}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              showLeasing 
+                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+            }`}
+          >
+            {showLeasing ? 'Rimuovi Leasing' : 'Aggiungi Leasing'}
+          </button>
+        </div>
+        
+        {showLeasing && (
+             <LeasingForm form={{ register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors }, clearErrors } as any} />
+        )}
+      </div>
+
+      {/* Attachments Section */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-bold text-slate-800">Allegati PDF (foto e descrizioni)</h2>

@@ -94,6 +94,26 @@ export interface Quote {
   ownerUserId?: number;
   attachmentsPosition?: 'before' | 'after';
   customerId?: number;
+  leasing?: LeasingData;
+}
+
+export interface LeasingData {
+  // 1) Parametri economici base
+  assetValue?: number;
+  vatRate?: number;
+  vatAmount?: number;
+  totalAssetValueVatIncl?: number;
+  initialDownPaymentValue?: number;
+  initialDownPaymentPercent?: number;
+  netFinancedCapital?: number;
+
+  // 2) Durata e struttura canoni
+  durationMonths?: number;
+  numberOfInstallments?: number;
+  periodicity?: 'monthly' | 'quarterly';
+  installmentAmount?: number;
+  startDate?: Date | null;
+  firstInstallmentDate?: Date | null;
 }
 
 export interface Settings {

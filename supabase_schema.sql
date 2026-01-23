@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS "customers" (
   "email" text,
   "phone" text,
   "pec" text,
-  "recipientCode" text
+  "recipientCode" text,
+  "ownerUserId" bigint REFERENCES "users" ("id")
 );
 
 -- Articles Table
@@ -29,8 +30,10 @@ CREATE TABLE IF NOT EXISTS "articles" (
   "description" text NOT NULL,
   "unitPrice" numeric NOT NULL,
   "unit" text NOT NULL,
-  "vat" numeric NOT NULL
+  "vat" numeric NOT NULL,
+  "ownerUserId" bigint REFERENCES "users" ("id")
 );
+
 
 -- Quotes Table
 CREATE TABLE IF NOT EXISTS "quotes" (
@@ -71,7 +74,8 @@ CREATE TABLE IF NOT EXISTS "quotes" (
   "createdAt" timestamptz DEFAULT now(),
   "ownerUserId" bigint REFERENCES "users" ("id"),
   "attachmentsPosition" text,
-  "customerId" bigint REFERENCES "customers" ("id")
+  "customerId" bigint REFERENCES "customers" ("id"),
+  "leasing" jsonb
 );
 
 -- Settings Table
