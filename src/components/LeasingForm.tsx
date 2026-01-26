@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { Quote } from '../db';
 import { Coins, Calendar } from 'lucide-react';
@@ -8,7 +8,31 @@ interface Props {
 }
 
 export const LeasingForm: React.FC<Props> = ({ form }) => {
-  const { register } = form;
+  const { register, watch, setValue, getValues } = form;
+
+  const assetValue = watch('leasing.assetValue');
+  const vatRate = watch('leasing.vatRate');
+
+  // Set default VAT rate to 22% on mount if not set
+  useEffect(() => {
+    const currentVat = getValues('leasing.vatRate');
+    if (currentVat === undefined || currentVat === null) {
+      setValue('leasing.vatRate', 22);
+    }
+  }, [setValue, getValues]);
+
+  // Auto-calculate VAT amount and Total
+  useEffect(() => {
+    const val = Number(assetValue);
+    const rate = Number(vatRate);
+    
+    if (!isNaN(val) && !isNaN(rate)) {
+      const vat = (val * rate) / 100;
+      const total = val + vat;
+      setValue('leasing.vatAmount', Number(vat.toFixed(2)));
+      setValue('leasing.totalAssetValueVatIncl', Number(total.toFixed(2)));
+    }
+  }, [assetValue, vatRate, setValue]);
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-8">
