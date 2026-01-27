@@ -94,19 +94,18 @@ export const NewQuote: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      const session = await supabase.auth.getSession();
+      const uid = getCurrentUserId();
       
       // If editing, load the quote
-      if (id) {
-        if (session.data.session) {
-          const { data, error } = await supabase
-            .from('quotes')
-            .select('*')
-            .eq('id', Number(id)) // Ensure number
-            .eq('ownerUserId', session.data.session.user.id) // Ensure we only get our own quote
-            .maybeSingle();
+      if (id && uid) {
+        const { data, error } = await supabase
+          .from('quotes')
+          .select('*')
+          .eq('id', Number(id)) // Ensure number
+          .eq('ownerUserId', uid) // Ensure we only get our own quote
+          .maybeSingle();
 
-          if (error) {
+        if (error) {
             console.error('Error fetching quote:', error);
             alert('Errore nel caricamento del preventivo: ' + error.message);
           } else if (data) {
@@ -141,7 +140,6 @@ export const NewQuote: React.FC = () => {
              alert('Preventivo non trovato.');
              navigate('/');
           }
-        }
       }
     };
     loadData();
@@ -372,7 +370,7 @@ export const NewQuote: React.FC = () => {
         console.error('Load last quote defaults failed', e);
       }
     })();
-  }, [setValue]);
+  }, [setValue, id]);
 
   const onSubmit = async (data: Quote) => {
     try {
@@ -383,6 +381,8 @@ export const NewQuote: React.FC = () => {
         alert('Utente non autenticato');
         return;
       }
+      
+      console.log('Submitting quote. ID:', id, 'Data:', data);
 
       // Prepare payload - ensure undefined values are removed or handled if needed
       // Supabase handles JSON columns for arrays automatically if defined as jsonb in schema.
@@ -398,6 +398,23 @@ export const NewQuote: React.FC = () => {
       
       // Remove id from payload if it exists, to avoid updating primary key (though Supabase ignores it usually)
       delete payload.id;
+
+      // Remove fields that are now managed globally via Settings and not stored per-quote
+      // This prevents errors if these columns don't exist in the DB schema and ensures global settings are used
+      delete payload.premessaHardwareImages;
+      delete payload.premessaHardwareImageScale;
+      delete payload.premessaHardwareImageCount;
+      delete payload.premessaHardwareImageHeight;
+      
+      delete payload.softwareImages;
+      delete payload.softwareImageScale;
+      delete payload.softwareImageCount;
+      delete payload.softwareImageHeight;
+      
+      delete payload.targetAudienceImages;
+      delete payload.targetAudienceImageScale;
+      delete payload.targetAudienceImageCount;
+      delete payload.targetAudienceImageHeight;
 
       if (id) {
         const { error } = await supabase
@@ -451,8 +468,8 @@ export const NewQuote: React.FC = () => {
             <ArrowLeft size={24} />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Nuovo Preventivo</h1>
-            <p className="text-slate-500 mt-1">Compila i dati per creare un nuovo documento.</p>
+            <h1 className="text-3xl font-bold text-slate-900">{id ? 'Modifica Preventivo' : 'Nuovo Preventivo'}</h1>
+            <p className="text-slate-500 mt-1">{id ? 'Modifica i dati del preventivo esistente.' : 'Compila i dati per creare un nuovo documento.'}</p>
           </div>
         </div>
         <button
@@ -460,7 +477,7 @@ export const NewQuote: React.FC = () => {
           className="bg-blue-600 text-white px-6 py-3 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 font-semibold"
         >
           <Save size={20} />
-          <span>Salva Preventivo</span>
+          <span>{id ? 'Aggiorna Preventivo' : 'Salva Preventivo'}</span>
         </button>
       </div>
 
@@ -840,55 +857,11 @@ export const NewQuote: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">Hardware</label>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Premessa - Immagini Hardware (6)</label>
-                <div className="flex items-center space-x-3 mb-3">
-                  <select
-                    {...register('premessaHardwareImageCount' as const, { valueAsNumber: true })}
-                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                  >
-                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                      <option key={`hw-count-${n}`} value={n}>{n}</option>
-                    ))}
-                  </select>
-                  <span className="text-xs text-slate-500">Numero immagini hardware</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {Array.from({ length: hwCount }).map((_, i) => (
-                    <input
-                      key={`hw-${i}`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => onHardwareImageChange(i, e.target.files?.[0])}
-                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    />
-                  ))}
-                </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini hardware (px)</label>
-                  <input
-                    type="number"
-                    {...register('premessaHardwareImageHeight' as const, { valueAsNumber: true })}
-                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    placeholder="150"
-                  />
-                </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine hardware (percentuale)</label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="range"
-                      min={30}
-                      max={200}
-                      step={5}
-                      {...register('premessaHardwareImageScale' as const, { valueAsNumber: true })}
-                      className="w-full"
-                    />
-                    <span className="text-sm text-slate-600">{watch('premessaHardwareImageScale') || 100}%</span>
-                  </div>
-                </div>
+                <div className="text-xs text-slate-500 text-center mb-3">Immagini e scala configurabili dalle impostazioni generali</div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">Software</label>
+                <div className="text-xs text-slate-500 text-center mb-3">Immagini e scala configurabili dalle impostazioni generali</div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Descrizione</label>
@@ -900,127 +873,8 @@ export const NewQuote: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Software - Immagini (6)</label>
-                <div className="flex items-center space-x-3 mb-3">
-                  <select
-                    {...register('softwareImageCount' as const, { valueAsNumber: true })}
-                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                  >
-                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                      <option key={`sw-count-${n}`} value={n}>{n}</option>
-                    ))}
-                  </select>
-                  <span className="text-xs text-slate-500">Numero immagini software</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {Array.from({ length: swCount }).map((_, i) => (
-                    <input
-                      key={`sw-${i}`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => onSoftwareImageChange(i, e.target.files?.[0])}
-                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    />
-                  ))}
-                </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini software (px)</label>
-                  <input
-                    type="number"
-                    {...register('softwareImageHeight' as const, { valueAsNumber: true })}
-                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    placeholder="150"
-                  />
-                </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine (percentuale)</label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="range"
-                      min={30}
-                      max={200}
-                      step={5}
-                      {...register('softwareImageScale' as const, { valueAsNumber: true })}
-                      className="w-full"
-                    />
-                    <span className="text-sm text-slate-600">{watch('softwareImageScale') || 100}%</span>
-                  </div>
-                </div>
-              </div>
-              <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1 text-center">A chi ci rivolgiamo</label>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo - Immagini</label>
-                <div className="flex items-center space-x-3 mb-3">
-                  <select
-                    {...register('targetAudienceImageCount' as const, { valueAsNumber: true })}
-                    className="w-28 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                  >
-                    {Array.from({ length: 15 }, (_, i) => i + 1).map(n => (
-                      <option key={`aud-count-${n}`} value={n}>{n}</option>
-                    ))}
-                  </select>
-                  <span className="text-xs text-slate-500">Numero immagini target</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  {Array.from({ length: Math.min(audCount, 5) }).map((_, i) => (
-                    <input
-                      key={`aud-top-${i}`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => onTargetAudienceImageChange(i, e.target.files?.[0])}
-                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    />
-                  ))}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
-                  {Array.from({ length: Math.max(Math.min(audCount - 5, 5), 0) }).map((_, i) => (
-                    <input
-                      key={`aud-bottom-${i}`}
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => onTargetAudienceImageChange(5 + i, e.target.files?.[0])}
-                      className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    />
-                  ))}
-                </div>
-                {audCount > 10 && (
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
-                    {Array.from({ length: Math.min(audCount - 10, 5) }).map((_, i) => (
-                      <input
-                        key={`aud-third-${i}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => onTargetAudienceImageChange(10 + i, e.target.files?.[0])}
-                        className="rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                      />
-                    ))}
-                  </div>
-                )}
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Altezza immagini (px)</label>
-                  <input
-                    type="number"
-                    {...register('targetAudienceImageHeight' as const, { valueAsNumber: true })}
-                    className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
-                    placeholder="120"
-                  />
-                </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine (percentuale)</label>
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="range"
-                      min={30}
-                      max={200}
-                      step={5}
-                      {...register('targetAudienceImageScale' as const, { valueAsNumber: true })}
-                      className="w-full"
-                    />
-                    <span className="text-sm text-slate-600">{watch('targetAudienceImageScale') || 100}%</span>
-                  </div>
-                </div>
+                <div className="text-xs text-slate-500 text-center mb-3">Immagini e scala configurabili dalle impostazioni generali</div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">2. Descrizione Prodotti - Testo</label>

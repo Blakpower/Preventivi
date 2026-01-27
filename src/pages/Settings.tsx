@@ -296,6 +296,20 @@ export const SettingsPage: React.FC = () => {
                 {watch('defaultHardwareImage') && (
                   <img src={watch('defaultHardwareImage')} alt="Hardware default" className="mt-2 h-24 object-contain border rounded-lg" />
                 )}
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala Hardware (%)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('defaultHardwareScale', { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('defaultHardwareScale') || 100}%</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Software (immagine default)</label>
@@ -309,6 +323,20 @@ export const SettingsPage: React.FC = () => {
                 {watch('defaultSoftwareImage') && (
                   <img src={watch('defaultSoftwareImage')} alt="Software default" className="mt-2 h-24 object-contain border rounded-lg" />
                 )}
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala Software (%)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('defaultSoftwareScale', { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('defaultSoftwareScale') || 100}%</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">A chi ci rivolgiamo (immagine default)</label>
@@ -322,6 +350,20 @@ export const SettingsPage: React.FC = () => {
                 {watch('defaultTargetImage') && (
                   <img src={watch('defaultTargetImage')} alt="Target default" className="mt-2 h-24 object-contain border rounded-lg" />
                 )}
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala Target (%)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('defaultTargetScale', { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('defaultTargetScale') || 100}%</span>
+                  </div>
+                </div>
               </div>
             </div>
             <p className="text-xs text-slate-500 mt-2">Queste immagini saranno pre-caricate automaticamente nei nuovi preventivi.</p>

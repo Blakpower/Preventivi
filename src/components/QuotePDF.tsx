@@ -381,9 +381,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       
         <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 4 }]}>Software</Text>
         {(() => {
-          const firstSw = (quote.softwareImages || []).filter(Boolean)[0];
+          const firstSw = (quote.softwareImages || []).filter(Boolean)[0] || settings.defaultSoftwareImage;
           const swBaseHeight = Number(quote.softwareImageHeight ?? settings.defaultSoftwareHeight ?? 180);
-          const swScale = Number(quote.softwareImageScale ?? 100) / 100;
+          const swScale = Number(quote.softwareImageScale ?? settings.defaultSoftwareScale ?? 100) / 100;
           const CONTENT_WIDTH = 530; // Safer max width than 100%
           
           return firstSw ? (
@@ -410,9 +410,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           </Text>
         </View>
         {(() => {
-          const firstAud = (quote.targetAudienceImages || []).filter(Boolean)[0];
+          const firstAud = (quote.targetAudienceImages || []).filter(Boolean)[0] || settings.defaultTargetImage;
           const audBaseHeight = Number(quote.targetAudienceImageHeight ?? settings.defaultTargetHeight ?? 180);
-          const audScale = Number(quote.targetAudienceImageScale ?? 100) / 100;
+          const audScale = Number(quote.targetAudienceImageScale ?? settings.defaultTargetScale ?? 100) / 100;
           const CONTENT_WIDTH = 530;
 
           return firstAud ? (

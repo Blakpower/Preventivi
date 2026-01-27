@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS "quotes" (
   "premessaHardwareImages" jsonb DEFAULT '[]',
   "premessaHardwareImageHeight" integer,
   "premessaHardwareImageCount" integer,
+  "premessaHardwareImageScale" integer,
   "softwareText" text,
   "softwareImages" jsonb DEFAULT '[]',
   "softwareImageHeight" integer,
@@ -111,3 +112,6 @@ CREATE TABLE IF NOT EXISTS "settings" (
 INSERT INTO "users" ("username", "displayName", "email", "passwordHash")
 VALUES ('admin', 'Admin', '', 'admin')
 ON CONFLICT ("username") DO NOTHING;
+
+-- Migration: Add premessaHardwareImageScale column (Run this if the table already exists)
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "premessaHardwareImageScale" integer DEFAULT 100;

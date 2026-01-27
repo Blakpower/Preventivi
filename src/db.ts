@@ -137,6 +137,9 @@ export interface Settings {
   defaultHardwareHeight?: number;
   defaultSoftwareHeight?: number;
   defaultTargetHeight?: number;
+  defaultHardwareScale?: number;
+  defaultSoftwareScale?: number;
+  defaultTargetScale?: number;
   defaultDescrizioneFirstHeight?: number;
   contractPagesText?: string;
   nextQuoteNumber: number;
