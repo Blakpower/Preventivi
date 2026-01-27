@@ -320,7 +320,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </Page>
       );
     })}
-    {/* Index Page */}
+    {/* Index Page + Premessa */}
     <Page size="A4" style={styles.page} id="indice">
       {renderHeader()}
       {quote.tocTextAbove && (
@@ -344,23 +344,22 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {quote.tocText && (
         <Text style={{ fontSize: 11, color: '#4b5563' }}>{quote.tocText}</Text>
       )}
-      {renderFooter()}
-    </Page>
 
-    {/* Premessa Page - Hardware + Software + Target Audience */}
-    <Page size="A4" style={styles.attachmentPage} id="premessa">
-      {renderHeader()}
-      <Text style={styles.attachmentTitle}>1. Premessa</Text>
-      {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
-      <View style={{ marginTop: 12 }}>
-        <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
-        {(() => {
-          const firstHw = (quote.premessaHardwareImages || []).filter(Boolean)[0];
-          return firstHw ? (
-            <Image style={{ width: '100%', height: settings.defaultHardwareHeight ?? 380, objectFit: 'contain' }} src={firstHw} />
-          ) : null;
-        })()}
+      {/* Premessa Section (Merged) */}
+      <View style={{ marginTop: 20 }} id="premessa">
+        <Text style={styles.attachmentTitle}>1. Premessa</Text>
+        {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
+        <View style={{ marginTop: 12 }}>
+          <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
+          {(() => {
+            const firstHw = (quote.premessaHardwareImages || []).filter(Boolean)[0];
+            return firstHw ? (
+              <Image style={{ width: '100%', height: settings.defaultHardwareHeight ?? 380, objectFit: 'contain' }} src={firstHw} />
+            ) : null;
+          })()}
+        </View>
       </View>
+
       {renderFooter()}
     </Page>
     {/* Pagina Software + descrizione + Target Audience (stessa pagina, adattamento automatico) */}
@@ -504,6 +503,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         ))}
       </View>
 
+      <View wrap={false}>
       {/* Totals */}
       <View style={styles.totalsSection}>
         <View style={styles.totalsBox}>
@@ -636,6 +636,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text style={{ fontSize: 11, marginBottom: 30 }}>Firma per accettazione</Text>
           <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
         </View>
+      </View>
       </View>
 
       {/* Footer */}
