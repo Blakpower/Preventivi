@@ -70,6 +70,7 @@ export interface Quote {
   premessaHardwareImages?: string[];
   premessaHardwareImageHeight?: number;
   premessaHardwareImageCount?: number;
+  premessaHardwareImageScale?: number;
   softwareText?: string;
   softwareImages?: string[];
   softwareImageHeight?: number;

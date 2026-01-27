@@ -351,6 +351,7 @@ export const NewQuote: React.FC = () => {
         if (last.premessaHardwareImages) setValue('premessaHardwareImages', last.premessaHardwareImages);
         if (last.premessaHardwareImageHeight) setValue('premessaHardwareImageHeight', last.premessaHardwareImageHeight);
         if (last.premessaHardwareImageCount) setValue('premessaHardwareImageCount', last.premessaHardwareImageCount);
+        if (last.premessaHardwareImageScale) setValue('premessaHardwareImageScale', last.premessaHardwareImageScale);
         if (last.softwareText) setValue('softwareText', last.softwareText);
         if (last.softwareImages) setValue('softwareImages', last.softwareImages);
         if (last.softwareImageHeight) setValue('softwareImageHeight', last.softwareImageHeight);
@@ -870,6 +871,20 @@ export const NewQuote: React.FC = () => {
                     className="w-48 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
                     placeholder="150"
                   />
+                </div>
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-slate-700 mb-1">Scala immagine hardware (percentuale)</label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="range"
+                      min={30}
+                      max={200}
+                      step={5}
+                      {...register('premessaHardwareImageScale' as const, { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-slate-600">{watch('premessaHardwareImageScale') || 100}%</span>
+                  </div>
                 </div>
               </div>
               <div>

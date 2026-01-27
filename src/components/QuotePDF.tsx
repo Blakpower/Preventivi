@@ -5,7 +5,7 @@ import { type Quote, type Settings } from '../db';
 
 const styles = StyleSheet.create({
   page: {
-    padding: 40,
+    padding: 30,
     fontSize: 10,
     fontFamily: 'Helvetica',
     color: '#333',
@@ -13,16 +13,16 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#e5e7eb',
-    marginTop: 10,
-    marginBottom: 20,
+    marginTop: 5,
+    marginBottom: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 40,
+    marginBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   logoLeft: {
     alignItems: 'flex-start',
@@ -53,10 +53,10 @@ const styles = StyleSheet.create({
     objectFit: 'contain',
   },
   customerSection: {
-    marginTop: 20,
-    marginBottom: 40,
+    marginTop: 10,
+    marginBottom: 20,
     backgroundColor: '#1e3a8a', // Dark blue
-    padding: 15,
+    padding: 10,
     borderRadius: 4,
     color: '#ffffff',
   },
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   totalsSection: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 20,
+    marginTop: 10,
   },
   totalsBox: {
     width: '40%',
@@ -123,9 +123,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 30,
-    left: 40,
-    right: 40,
+    bottom: 20,
+    left: 30,
+    right: 30,
     textAlign: 'center',
     fontSize: 8,
     color: '#9ca3af',
@@ -134,8 +134,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   bankInfo: {
-    marginTop: 40,
-    padding: 10,
+    marginTop: 20,
+    padding: 8,
     backgroundColor: '#1e3a8a', // Dark blue
     borderRadius: 4,
     fontSize: 9,
@@ -353,8 +353,21 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
           {(() => {
             const firstHw = (quote.premessaHardwareImages || []).filter(Boolean)[0];
+            const hwBaseHeight = Number(quote.premessaHardwareImageHeight ?? settings.defaultHardwareHeight ?? 380);
+            const hwScale = Number(quote.premessaHardwareImageScale ?? 100) / 100;
+            const CONTENT_WIDTH = 530;
+            
             return firstHw ? (
-              <Image style={{ width: '100%', height: settings.defaultHardwareHeight ?? 380, objectFit: 'contain' }} src={firstHw} />
+              <View style={{ width: '100%', alignItems: 'center' }}>
+                <Image 
+                  style={{ 
+                    width: Math.min(hwScale * CONTENT_WIDTH, CONTENT_WIDTH),
+                    height: hwBaseHeight * hwScale,
+                    objectFit: 'contain' 
+                  }} 
+                  src={firstHw} 
+                />
+              </View>
             ) : null;
           })()}
         </View>
@@ -630,10 +643,10 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       )}
 
-      <View style={{ marginTop: 30 }}>
+      <View style={{ marginTop: 20 }}>
         <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
-        <View style={{ marginTop: 20, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 11, marginBottom: 30 }}>Firma per accettazione</Text>
+        <View style={{ marginTop: 10, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 11, marginBottom: 20 }}>Firma per accettazione</Text>
           <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
         </View>
       </View>
