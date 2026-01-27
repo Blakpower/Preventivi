@@ -352,9 +352,10 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         <View style={{ marginTop: 12 }}>
           <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
           {(() => {
-            const firstHw = (quote.premessaHardwareImages || []).filter(Boolean)[0];
-            const hwBaseHeight = Number(quote.premessaHardwareImageHeight ?? settings.defaultHardwareHeight ?? 380);
-            const hwScale = Number(quote.premessaHardwareImageScale ?? 100) / 100;
+            // Usa esclusivamente l'immagine e lo scaler dalle impostazioni globali
+            const firstHw = settings.defaultHardwareImage;
+            const hwBaseHeight = Number(settings.defaultHardwareHeight ?? 380);
+            const hwScale = Number(settings.defaultHardwareScale ?? 100) / 100;
             const CONTENT_WIDTH = 530;
             
             return firstHw ? (
