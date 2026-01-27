@@ -237,13 +237,7 @@ export const NewQuote: React.FC = () => {
     const dataUrl = await toBase64(file);
     setValue(`attachments.${index}.imageData`, dataUrl, { shouldDirty: true });
   };
-  const onHardwareImageChange = async (idx: number, file?: File) => {
-    if (!file) return;
-    const dataUrl = await toBase64(file);
-    const arr = getValues('premessaHardwareImages') || [];
-    arr[idx] = dataUrl;
-    setValue('premessaHardwareImages', arr, { shouldDirty: true });
-  };
+
   const hwCount = watch('premessaHardwareImageCount') || 0;
   useEffect(() => {
     const current = getValues('premessaHardwareImages') || [];
@@ -256,13 +250,7 @@ export const NewQuote: React.FC = () => {
       setValue('premessaHardwareImages', current.slice(0, hwCount), { shouldDirty: true });
     }
   }, [hwCount]);
-  const onSoftwareImageChange = async (idx: number, file?: File) => {
-    if (!file) return;
-    const dataUrl = await toBase64(file);
-    const arr = getValues('softwareImages') || [];
-    arr[idx] = dataUrl;
-    setValue('softwareImages', arr, { shouldDirty: true });
-  };
+
   const swCount = watch('softwareImageCount') || 0;
   useEffect(() => {
     const current = getValues('softwareImages') || [];
@@ -275,13 +263,7 @@ export const NewQuote: React.FC = () => {
       setValue('softwareImages', current.slice(0, swCount), { shouldDirty: true });
     }
   }, [swCount]);
-  const onTargetAudienceImageChange = async (idx: number, file?: File) => {
-    if (!file) return;
-    const dataUrl = await toBase64(file);
-    const arr = getValues('targetAudienceImages') || [];
-    arr[idx] = dataUrl;
-    setValue('targetAudienceImages', arr, { shouldDirty: true });
-  };
+
   const audCount = watch('targetAudienceImageCount') || 0;
   useEffect(() => {
     const current = getValues('targetAudienceImages') || [];
