@@ -12,6 +12,7 @@ export const Quotes: React.FC = () => {
   const [quotes, setQuotes] = useState<Quote[]>([]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchSettings = async () => {
       const uid = getCurrentUserId();
       if (!uid) return;
@@ -19,13 +20,16 @@ export const Quotes: React.FC = () => {
         .from('settings')
         .select('*')
         .eq('userId', uid)
+        .abortSignal(controller.signal)
         .single();
       if (data) setSettings(data);
     };
     fetchSettings();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchQuotes = async () => {
       const uid = getCurrentUserId();
       if (!uid) return;
@@ -34,7 +38,8 @@ export const Quotes: React.FC = () => {
         .from('quotes')
         .select('*')
         .eq('ownerUserId', uid)
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .abortSignal(controller.signal);
 
       if (search) {
         // Supabase text search is basic with 'ilike'. For multiple fields OR condition:
@@ -58,6 +63,7 @@ export const Quotes: React.FC = () => {
       }
     };
     fetchQuotes();
+    return () => controller.abort();
   }, [search]);
 
   const handleDelete = async (id: number) => {

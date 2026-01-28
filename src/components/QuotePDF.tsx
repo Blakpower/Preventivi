@@ -241,6 +241,13 @@ const styles = StyleSheet.create({
   },
   leasingCol: {
     width: '48%',
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    color: '#111827',
   }
 });
 
@@ -289,8 +296,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
   const renderFooter = () => (
     <View style={styles.footer} fixed>
-      <Text>Esse Group S.r.l. - Via Aurora, 4 - 95037 San Giovanni La Punta (CT) - P.IVA 04944360876</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 4 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
         <Text>Prev. N. {displayNumber} - </Text>
         <Text render={({ pageNumber, totalPages }) => `Pag. ${pageNumber} di ${totalPages}`} />
       </View>
@@ -352,7 +358,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {quote.tocTextAbove && (
         <Text style={{ fontSize: 11, color: '#4b5563', marginBottom: 12 }}>{quote.tocTextAbove}</Text>
       )}
-      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 12 }}>INDICE</Text>
+      <Text style={styles.sectionTitle}>INDICE</Text>
       <View style={{ marginBottom: 10 }}>
         <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
           • <Link src="#premessa">1. PREMESSA</Link>
@@ -373,10 +379,10 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
       {/* Premessa Section (Merged) */}
       <View style={{ marginTop: 20 }} id="premessa">
-        <Text style={styles.attachmentTitle}>1. PREMESSA</Text>
+        <Text style={styles.sectionTitle}>1. PREMESSA</Text>
         {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
         <View style={{ marginTop: 12 }}>
-          <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>HARDWARE</Text>
+          <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>HARDWARE</Text>
           {(() => {
             // Usa esclusivamente l'immagine e lo scaler dalle impostazioni globali
             const firstHw = settings.defaultHardwareImage;
@@ -406,7 +412,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     <Page size="A4" style={styles.attachmentPage}>
       {renderHeader()}
       
-        <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 4 }]}>SOFTWARE</Text>
+        <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 4 }]}>SOFTWARE</Text>
         {(() => {
           const firstSw = (quote.softwareImages || []).filter(Boolean)[0] || settings.defaultSoftwareImage;
           const swBaseHeight = Number(quote.softwareImageHeight ?? settings.defaultSoftwareHeight ?? 180);
@@ -432,7 +438,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           ) : null;
         })()}
         <View style={{ marginTop: 6 }}>
-          <Text style={[styles.attachmentText, { fontSize: 10, lineHeight: 1.35 }]}>
+          <Text style={[styles.attachmentText, { fontSize: 10, lineHeight: 1.35, textAlign: 'justify' }]}>
             {quote.softwareText || "Il nostro progetto è nato nel 2012 e, ad oggi, vantiamo numerose installazioni in tutta la regione. L'obiettivo dell'azienda, oltre quello di offrire alla propria clientela tutte le attrezzature e le soluzioni hardware e software necessarie per una corretta gestione della propria attività commerciale, è soprattutto quello di garantire l'assistenza post-vendita. A tal fine mette a disposizione dei propri Clienti una qualificata struttura di Assistenza Tecnica ed un efficientissimo servizio di Help Desk che garantiscono la pronta risoluzione di qualunque problematica sia Hardware che Software in tempi estremamente rapidi."}
           </Text>
         </View>
@@ -444,7 +450,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
           return firstAud ? (
             <View style={{ marginTop: 20 }}>
-              <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 0 }]}>A chi ci rivolgiamo</Text>
+              <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 0 }]}>A CHI CI RIVOLGIAMO</Text>
               <View style={{ 
                 width: '100%',
                 alignItems: 'center', 
@@ -466,54 +472,79 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {renderFooter()}
     </Page>
 
-    {/* Sezione 2 - Descrizione Prodotti con prima immagine nella stessa pagina */}
+    {/* Sezione 2 - Descrizione Prodotti */}
     {(() => {
       const imgs = (quote.descrizioneProdottiImages || []).filter(Boolean);
+      const captions = quote.descrizioneProdottiCaptions || [];
       const pages: React.ReactElement[] = [];
-      // Intro page with section title, text and first image filling the remaining area (senza crop)
-      pages.push(
-        <Page key="desc-prod-intro" size="A4" style={styles.attachmentPage} id="descrizione">
-          {renderHeader()}
-          <Text style={styles.attachmentTitle}>2. DESCRIZIONE PRODOTTI</Text>
-          {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
-          {imgs[0] && (
-            <View style={{ 
-              width: '100%',
-              alignItems: 'center',
-              marginTop: 10 
-            }}>
-              <Image 
-                style={{ 
-                  width: Math.min(Number(quote.descrizioneProdottiFirstImageScale ?? 100) / 100 * 530, 530),
-                  height: Math.max(100, Math.round((300 * Number(quote.descrizioneProdottiFirstImageScale ?? 100)) / 100)),
-                  objectFit: 'contain' 
-                }} 
-                src={imgs[0]!} 
-              />
-            </View>
-          )}
-          {renderFooter()}
-        </Page>
-      );
-      // Full-page image pages for remaining images
-      imgs.slice(1).forEach((img, idx) => {
-        pages.push(
-          <Page key={`desc-prod-full-${idx}`} size="A4" style={styles.fullImagePage}>
-            {renderHeader()}
-            <View style={styles.imageFillContainer}>
-              <Image style={[styles.fullImage, { objectFit: quote.descrizioneProdottiImageFit || 'contain' }]} src={img!} />
-            </View>
-            {renderFooter()}
-          </Page>
-        );
-      });
+      
+      const scale = Number(quote.descrizioneProdottiFirstImageScale ?? 100) / 100;
+      const CONTENT_WIDTH = 530;
+      const imgWidth = Math.min(scale * CONTENT_WIDTH, CONTENT_WIDTH);
+      const imgHeight = Math.max(100, Math.round(300 * scale));
+
+      // Intro page with section title and first image
+          pages.push(
+            <Page key="desc-prod-intro" size="A4" style={styles.attachmentPage} id="descrizione">
+              {renderHeader()}
+              <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>
+              {imgs[0] && (
+                <View style={{ 
+                  width: '100%',
+                  alignItems: 'center',
+                  marginTop: 10 
+                }}>
+                  {captions[0] && (
+                    <Text style={[styles.attachmentText, { marginBottom: 10, fontWeight: 'bold' }]}>{captions[0]}</Text>
+                  )}
+                  <Image 
+                    style={{ 
+                      width: imgWidth,
+                      height: imgHeight,
+                      objectFit: 'contain' 
+                    }} 
+                    src={imgs[0]!} 
+                  />
+                </View>
+              )}
+              {renderFooter()}
+            </Page>
+          );
+
+          // Remaining images on separate pages, scaled exactly like the first one
+          imgs.slice(1).forEach((img, idx) => {
+            const realIdx = idx + 1;
+            pages.push(
+              <Page key={`desc-prod-${realIdx}`} size="A4" style={styles.attachmentPage}>
+                {renderHeader()}
+                <View style={{ 
+                  width: '100%',
+                  alignItems: 'center',
+                  marginTop: 20 
+                }}>
+                  {captions[realIdx] && (
+                    <Text style={[styles.attachmentText, { marginBottom: 10, fontWeight: 'bold' }]}>{captions[realIdx]}</Text>
+                  )}
+                  <Image 
+                    style={{ 
+                      width: imgWidth,
+                      height: imgHeight,
+                      objectFit: 'contain' 
+                    }} 
+                    src={img!} 
+                  />
+                </View>
+                {renderFooter()}
+              </Page>
+            );
+          });
       return pages;
     })()}
 
     {/* Economic Offer: main quote page */}
     <Page size="A4" style={styles.page} id="offerta">
       {renderHeader()}
-      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. OFFERTA ECONOMICA</Text>
+      <Text style={styles.sectionTitle}>3. OFFERTA ECONOMICA</Text>
 
       {/* Items Table */}
       <View style={styles.table}>
@@ -645,7 +676,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {/* Conditions inline below economic offer */}
       {(quote.conditionsList && quote.conditionsList.length > 0) && (
         <View style={{ marginTop: 16 }} id="condizioni">
-          <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>4. CONDIZIONI DI FORNITURA</Text>
+          <Text style={styles.sectionTitle}>4. CONDIZIONI DI FORNITURA</Text>
           <View>
             {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (
               <View key={`cond-inline-${idx}`} style={{ flexDirection: 'row', marginBottom: 6 }}>
@@ -660,7 +691,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       <View style={{ marginTop: 20 }}>
         <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
         <View style={{ marginTop: 10, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 11, marginBottom: 20 }}>Firma per accettazione</Text>
+          <Text style={{ fontSize: 11, marginBottom: 50 }}>Firma per accettazione</Text>
           <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
         </View>
       </View>

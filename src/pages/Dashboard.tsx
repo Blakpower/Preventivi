@@ -13,6 +13,7 @@ export const Dashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchStats = async () => {
       const uid = getCurrentUserId();
       if (!uid) return;
@@ -26,7 +27,8 @@ export const Dashboard: React.FC = () => {
       const { data: allQuotesData, error: quotesError } = await supabase
         .from('quotes')
         .select('total, createdAt')
-        .eq('ownerUserId', uid);
+        .eq('ownerUserId', uid)
+        .abortSignal(controller.signal);
 
       const quotesCount = allQuotesData?.length || 0;
       const totalValue = allQuotesData?.reduce((acc, q) => acc + (q.total || 0), 0) || 0;
@@ -36,7 +38,8 @@ export const Dashboard: React.FC = () => {
         .select('*')
         .eq('ownerUserId', uid)
         .order('createdAt', { ascending: false })
-        .limit(5);
+        .limit(5)
+        .abortSignal(controller.signal);
 
       const recentQuotes = (recentQuotesData || []).map((q: any) => ({
         ...q,
@@ -48,7 +51,8 @@ export const Dashboard: React.FC = () => {
       const { count: articlesCount, error: articlesError } = await supabase
         .from('articles')
         .select('*', { count: 'exact', head: true })
-        .eq('ownerUserId', uid);
+        .eq('ownerUserId', uid)
+        .abortSignal(controller.signal);
 
       if (quotesError) console.error(quotesError);
       if (recentError) console.error(recentError);
@@ -62,6 +66,7 @@ export const Dashboard: React.FC = () => {
       });
     };
     fetchStats();
+    return () => controller.abort();
   }, []);
 
   if (!stats) return <div className="p-8 text-center text-slate-500">Caricamento dashboard...</div>;

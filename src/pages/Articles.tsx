@@ -16,6 +16,7 @@ export const Articles: React.FC = () => {
   }, [search]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchArticles = async () => {
       const uid = getCurrentUserId();
       if (!uid) return;
@@ -24,20 +25,32 @@ export const Articles: React.FC = () => {
         .from('articles')
         .select('*')
         .eq('ownerUserId', uid)
-        .order('code', { ascending: true });
+        .order('code', { ascending: true })
+        .abortSignal(controller.signal);
 
       if (debouncedSearch) {
         query = query.or(`code.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching articles:', error);
-      } else {
-        setArticles(data || []);
+      try {
+        const { data, error } = await query;
+        if (error) {
+          if (error.name !== 'AbortError' && !String(error.message).includes('Abort')) {
+            console.error('Error fetching articles:', error);
+          }
+        } else {
+          setArticles(data || []);
+        }
+      } catch (e) {
+        const err = e as { name?: string; message?: string };
+        if (err?.name === 'AbortError' || String(err?.message).includes('Abort')) {
+          return;
+        }
+        console.error('Error fetching articles:', e);
       }
     };
     fetchArticles();
+    return () => controller.abort();
   }, [debouncedSearch]); // debounced per ridurre abort
 
   const refreshArticles = async () => {

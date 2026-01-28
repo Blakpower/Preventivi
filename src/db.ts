@@ -82,6 +82,7 @@ export interface Quote {
   targetAudienceImageScale?: number;
   descrizioneProdottiText?: string;
   descrizioneProdottiImages?: string[];
+  descrizioneProdottiCaptions?: string[];
   descrizioneProdottiImageCount?: number;
   descrizioneProdottiImageFit?: 'contain' | 'cover';
   descrizioneProdottiFirstImageScale?: number;

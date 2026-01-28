@@ -115,3 +115,6 @@ ON CONFLICT ("username") DO NOTHING;
 
 -- Migration: Add premessaHardwareImageScale column (Run this if the table already exists)
 ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "premessaHardwareImageScale" integer DEFAULT 100;
+
+-- Migration: Add descrizioneProdottiCaptions column
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "descrizioneProdottiCaptions" jsonb DEFAULT '[]';
