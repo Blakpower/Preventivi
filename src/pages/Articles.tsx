@@ -7,7 +7,13 @@ export const Articles: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | undefined>(undefined);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [articles, setArticles] = useState<Article[]>([]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
   useEffect(() => {
     const fetchArticles = async () => {
@@ -20,8 +26,8 @@ export const Articles: React.FC = () => {
         .eq('ownerUserId', uid)
         .order('code', { ascending: true });
 
-      if (search) {
-        query = query.or(`code.ilike.%${search}%,description.ilike.%${search}%`);
+      if (debouncedSearch) {
+        query = query.or(`code.ilike.%${debouncedSearch}%,description.ilike.%${debouncedSearch}%`);
       }
 
       const { data, error } = await query;
@@ -32,7 +38,7 @@ export const Articles: React.FC = () => {
       }
     };
     fetchArticles();
-  }, [search]); // Note: In real app, might want to debounce search or refresh on edit/add
+  }, [debouncedSearch]); // debounced per ridurre abort
 
   const refreshArticles = async () => {
     const uid = getCurrentUserId();
@@ -46,16 +52,21 @@ export const Articles: React.FC = () => {
       const uid = getCurrentUserId();
       if (!uid) return;
 
+      const articleData = { ...data };
+      if (!articleData.code) {
+        articleData.code = `ART-${Date.now().toString().slice(-6)}`;
+      }
+
       if (editingArticle && editingArticle.id) {
         const { error } = await supabase
           .from('articles')
-          .update({ ...data, ownerUserId: uid })
+          .update({ ...articleData, ownerUserId: uid })
           .eq('id', editingArticle.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('articles')
-          .insert({ ...data, ownerUserId: uid });
+          .insert({ ...articleData, ownerUserId: uid });
         if (error) throw error;
       }
       

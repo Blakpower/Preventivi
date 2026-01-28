@@ -31,15 +31,8 @@ export const ArticleForm: React.FC<ArticleFormProps> = ({ initialData, onSubmit,
         </div>
         
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Codice</label>
-            <input
-              {...register('code', { required: 'Il codice è obbligatorio' })}
-              className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 bg-slate-50 border transition-colors"
-              placeholder="Es. ART-001"
-            />
-            {errors.code && <p className="text-red-500 text-xs mt-1 font-medium">{errors.code.message}</p>}
-          </div>
+          {/* Code input removed as per request */}
+          <input type="hidden" {...register('code')} />
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Descrizione</label>

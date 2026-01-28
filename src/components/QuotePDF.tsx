@@ -23,24 +23,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     paddingBottom: 10,
+    marginLeft: -20
   },
   logoLeft: {
     alignItems: 'flex-start',
     justifyContent: 'center',
+    flexShrink: 0
+  },
+  logoLeftEdge: {
+    marginLeft: -40
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2563eb', // blue-600
     marginBottom: 5,
+    textTransform: 'uppercase',
   },
   quoteMeta: {
     fontSize: 10,
     color: '#666',
   },
   companyInfo: {
-    width: '55%',
     alignItems: 'flex-end',
+    flexGrow: 1
   },
   companyName: {
     fontSize: 14,
@@ -48,29 +54,31 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   logo: {
-    width: 120,
-    height: 60,
+    width: 350,
+    height: 100,
     objectFit: 'contain',
+    marginLeft: 0,
+    alignSelf: 'flex-start'
   },
   customerSection: {
-    marginTop: 10,
-    marginBottom: 20,
-    backgroundColor: '#1e3a8a', // Dark blue
-    padding: 10,
+    marginBottom: 8,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
     borderRadius: 4,
-    color: '#ffffff',
   },
   customerTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     marginBottom: 5,
-    color: '#ffffff',
+    color: '#4b5563',
+    textTransform: 'uppercase',
   },
   customerName: {
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 2,
-    color: '#ffffff',
+    color: '#1f2937',
   },
   table: {
     width: '100%',
@@ -157,7 +165,7 @@ const styles = StyleSheet.create({
   attachmentTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 6,
     color: '#111827',
   },
   attachmentImage: {
@@ -249,7 +257,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
   const renderHeader = () => (
     <>
       <View style={styles.header}>
-        <View style={styles.logoLeft}>
+        <View style={[styles.logoLeft, styles.logoLeftEdge]}>
           {(settings.logoData || settings.logoUrl) && (
             <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
           )}
@@ -258,13 +266,25 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text style={styles.companyName}>{settings.companyName}</Text>
           <Text>{settings.companyAddress}</Text>
           <Text>P.IVA: {settings.companyVat}</Text>
-          <Text>{settings.companyEmail}</Text>
+          <Text wrap={false}>{String(settings.companyEmail || '').replace(/\s*\n\s*/g, ' ')}</Text>
           <Text>{settings.companyPhone}</Text>
-          <Text style={styles.quoteMeta}>N. {displayNumber} • Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
+          {settings.bankInfo && (
+             <Text style={{ marginTop: 2 }}>{settings.bankInfo}</Text>
+          )}
+          <Text style={[styles.quoteMeta, { marginTop: 4 }]}>N. {displayNumber} • Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
         </View>
       </View>
       <View style={styles.separator} />
     </>
+  );
+
+  const renderRecipient = () => (
+      <View style={styles.customerSection}>
+        <Text style={styles.customerTitle}>DESTINATARIO</Text>
+        <Text style={styles.customerName}>{quote.customerName}</Text>
+        <Text>{quote.customerAddress}</Text>
+        {quote.customerVat && <Text>P.IVA/CF: {quote.customerVat}</Text>}
+      </View>
   );
 
   const renderFooter = () => (
@@ -292,6 +312,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         return (
           <Page key={`att-top-${idx}`} size="A4" style={styles.fullImagePage}>
             {renderHeader()}
+            {idx === 0 && <View style={{ paddingHorizontal: 30 }}>{renderRecipient()}</View>}
             <View style={styles.imageFillContainer}>
               <Image style={styles.fullImage} src={att.imageData} />
             </View>
@@ -302,6 +323,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       return (
         <Page key={`att-top-${idx}`} size="A4" style={styles.attachmentPage}>
           {renderHeader()}
+          {idx === 0 && renderRecipient()}
           {showTitle && att.title && <Text style={styles.attachmentTitle}>{att.title}</Text>}
           {pos === 'left' || pos === 'right' ? (
             <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -323,22 +345,26 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {/* Index Page + Premessa */}
     <Page size="A4" style={styles.page} id="indice">
       {renderHeader()}
+      
+      {/* Customer Section moved to first page logic */}
+      {!attachmentsBefore && renderRecipient()}
+
       {quote.tocTextAbove && (
         <Text style={{ fontSize: 11, color: '#4b5563', marginBottom: 12 }}>{quote.tocTextAbove}</Text>
       )}
-      <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 12 }}>Indice</Text>
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
-          • <Link src="#premessa">1. Premessa</Link>
+      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 12 }}>INDICE</Text>
+      <View style={{ marginBottom: 10 }}>
+        <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
+          • <Link src="#premessa">1. PREMESSA</Link>
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
-          • <Link src="#descrizione">2. Descrizione prodotti</Link>
+        <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
+          • <Link src="#descrizione">2. DESCRIZIONE PRODOTTI</Link>
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
-          • <Link src="#offerta">3. Offerta economica</Link>
+        <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
+          • <Link src="#offerta">3. OFFERTA ECONOMICA</Link>
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>
-          • <Link src="#condizioni">4. Condizioni di fornitura</Link>
+        <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
+          • <Link src="#condizioni">4. CONDIZIONI DI FORNITURA</Link>
         </Text>
       </View>
       {quote.tocText && (
@@ -347,10 +373,10 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
       {/* Premessa Section (Merged) */}
       <View style={{ marginTop: 20 }} id="premessa">
-        <Text style={styles.attachmentTitle}>1. Premessa</Text>
+        <Text style={styles.attachmentTitle}>1. PREMESSA</Text>
         {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
         <View style={{ marginTop: 12 }}>
-          <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>Hardware</Text>
+          <Text style={[styles.attachmentTitle, { textAlign: 'center' }]}>HARDWARE</Text>
           {(() => {
             // Usa esclusivamente l'immagine e lo scaler dalle impostazioni globali
             const firstHw = settings.defaultHardwareImage;
@@ -380,7 +406,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     <Page size="A4" style={styles.attachmentPage}>
       {renderHeader()}
       
-        <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 4 }]}>Software</Text>
+        <Text style={[styles.attachmentTitle, { textAlign: 'center', marginBottom: 4 }]}>SOFTWARE</Text>
         {(() => {
           const firstSw = (quote.softwareImages || []).filter(Boolean)[0] || settings.defaultSoftwareImage;
           const swBaseHeight = Number(quote.softwareImageHeight ?? settings.defaultSoftwareHeight ?? 180);
@@ -448,7 +474,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       pages.push(
         <Page key="desc-prod-intro" size="A4" style={styles.attachmentPage} id="descrizione">
           {renderHeader()}
-          <Text style={styles.attachmentTitle}>2. Descrizione Prodotti</Text>
+          <Text style={styles.attachmentTitle}>2. DESCRIZIONE PRODOTTI</Text>
           {quote.descrizioneProdottiText && <Text style={styles.attachmentText}>{quote.descrizioneProdottiText}</Text>}
           {imgs[0] && (
             <View style={{ 
@@ -487,15 +513,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {/* Economic Offer: main quote page */}
     <Page size="A4" style={styles.page} id="offerta">
       {renderHeader()}
-      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. Offerta economica</Text>
-
-      {/* Customer */}
-      <View style={styles.customerSection}>
-        <Text style={styles.customerTitle}>DESTINATARIO</Text>
-        <Text style={styles.customerName}>{quote.customerName}</Text>
-        <Text style={{ color: '#ffffff' }}>{quote.customerAddress}</Text>
-        {quote.customerVat && <Text style={{ color: '#ffffff' }}>P.IVA/CF: {quote.customerVat}</Text>}
-      </View>
+      <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>3. OFFERTA ECONOMICA</Text>
 
       {/* Items Table */}
       <View style={styles.table}>
@@ -622,17 +640,12 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       )}
 
-      {/* Bank Info */}
-      {settings.bankInfo && (
-        <View style={styles.bankInfo}>
-          <Text style={{ fontWeight: 'bold', marginBottom: 2, color: '#ffffff' }}>Coordinate Bancarie:</Text>
-          <Text style={{ color: '#ffffff' }}>{settings.bankInfo}</Text>
-        </View>
-      )}
+      {/* Bank Info - Moved to Header */}
+
       {/* Conditions inline below economic offer */}
       {(quote.conditionsList && quote.conditionsList.length > 0) && (
         <View style={{ marginTop: 16 }} id="condizioni">
-          <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>4. Condizioni di fornitura</Text>
+          <Text style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8 }}>4. CONDIZIONI DI FORNITURA</Text>
           <View>
             {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (
               <View key={`cond-inline-${idx}`} style={{ flexDirection: 'row', marginBottom: 6 }}>
