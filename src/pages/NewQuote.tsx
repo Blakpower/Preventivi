@@ -430,20 +430,15 @@ export const NewQuote: React.FC = () => {
       }
       
       console.log('Submitting quote. ID:', id, 'Data:', data);
+      console.log('Settings:', settings);
 
       // Prepare payload - ensure undefined values are removed or handled if needed
-      // Supabase handles JSON columns for arrays automatically if defined as jsonb in schema.
-      // My schema defined arrays as jsonb or text[]? 
-      // Based on schema.sql I created:
-      // items jsonb, attachments jsonb, premessaHardwareImages text[], etc.
-      // So passing arrays is fine.
-      
       const payload: any = {
         ...data,
         ownerUserId: uid,
       };
       
-      // Remove id from payload if it exists, to avoid updating primary key (though Supabase ignores it usually)
+      // Remove id from payload if it exists
       delete payload.id;
 
       // Remove fields that are now managed globally via Settings and not stored per-quote
@@ -463,13 +458,18 @@ export const NewQuote: React.FC = () => {
       delete payload.targetAudienceImageCount;
       delete payload.targetAudienceImageHeight;
 
+      console.log('Payload prepared:', payload);
+
       if (id) {
         const { error } = await supabase
           .from('quotes')
           .update(payload)
           .eq('id', Number(id));
           
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase Update Error:', error);
+          throw error;
+        }
       } else {
         const numberValue = data.number && String(data.number).trim() ? data.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
         payload.number = numberValue;
@@ -479,7 +479,10 @@ export const NewQuote: React.FC = () => {
           .from('quotes')
           .insert(payload);
           
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase Insert Error:', error);
+          throw error;
+        }
 
         // Update next quote number
         await supabase
@@ -495,9 +498,9 @@ export const NewQuote: React.FC = () => {
       }
 
       navigate('/quotes');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving quote:', error);
-      alert('Errore durante il salvataggio del preventivo');
+      alert(`Errore durante il salvataggio del preventivo: ${error.message || JSON.stringify(error)}`);
     }
   };
 
