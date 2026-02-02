@@ -2,12 +2,13 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
-import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
 import { LeasingForm } from '../components/LeasingForm';
 import { CustomerForm } from '../components/CustomerForm';
+import { ArticleForm } from '../components/ArticleForm';
 
 export const NewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export const NewQuote: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [showLeasing, setShowLeasing] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -382,6 +384,38 @@ export const NewQuote: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error creating customer:', error);
+      alert('Errore durante la creazione del cliente: ' + error.message);
+    }
+  };
+
+  const handleCreateArticle = async (data: Omit<Article, 'id'>) => {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+
+    try {
+      const { data: newArticle, error } = await supabase
+        .from('articles')
+        .insert([{ ...data, ownerUserId: uid }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (newArticle) {
+        setArticles(prev => [...prev, newArticle].sort((a, b) => a.description.localeCompare(b.description)));
+        append({
+            code: newArticle.code || '',
+            description: newArticle.description,
+            quantity: 1,
+            unitPrice: newArticle.unitPrice,
+            vat: newArticle.vat,
+            total: newArticle.unitPrice
+        });
+        recalcTotals();
+        setIsArticleModalOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Error creating article:', error);
       alert('Errore durante la creazione del cliente: ' + error.message);
     }
   };
@@ -836,24 +870,34 @@ export const NewQuote: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-bold text-slate-800">Articoli e Servizi</h2>
-            <button
-              type="button"
-              onClick={() => {
-                append({ 
-                  code: '', 
-                  description: '', 
-                  quantity: 1, 
-                  unitPrice: 0, 
-                  vat: settings.defaultVat, 
-                  total: 0 
-                });
-                recalcTotals();
-              }}
-              className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold flex items-center space-x-1"
-            >
-              <Plus size={18} />
-              <span>Aggiungi Riga</span>
-            </button>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsArticleModalOpen(true)}
+                className="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-lg hover:bg-emerald-100 transition-colors text-sm font-bold flex items-center space-x-1"
+              >
+                <Package size={18} />
+                <span>Nuovo Articolo</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  append({ 
+                    code: '', 
+                    description: '', 
+                    quantity: 1, 
+                    unitPrice: 0, 
+                    vat: settings.defaultVat, 
+                    total: 0 
+                  });
+                  recalcTotals();
+                }}
+                className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-bold flex items-center space-x-1"
+              >
+                <Plus size={18} />
+                <span>Aggiungi Riga</span>
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -1353,6 +1397,13 @@ export const NewQuote: React.FC = () => {
         <CustomerForm
           onSubmit={handleCreateCustomer}
           onCancel={() => setIsCustomerModalOpen(false)}
+        />
+      )}
+      
+      {isArticleModalOpen && (
+        <ArticleForm
+          onSubmit={handleCreateArticle}
+          onCancel={() => setIsArticleModalOpen(false)}
         />
       )}
     </div>
