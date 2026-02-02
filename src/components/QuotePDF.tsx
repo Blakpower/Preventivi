@@ -278,7 +278,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           {settings.bankInfo && (
              <Text style={{ marginTop: 2 }}>{settings.bankInfo}</Text>
           )}
-          <Text style={[styles.quoteMeta, { marginTop: 4 }]}>N. {displayNumber} • Data: {format(quote.date, 'dd/MM/yyyy')}</Text>
+          <Text style={[styles.quoteMeta, { marginTop: 4 }]}>
+            N. {displayNumber} • Data: {quote.date instanceof Date && !isNaN(quote.date.getTime()) ? format(quote.date, 'dd/MM/yyyy') : ''}
+          </Text>
         </View>
       </View>
       <View style={styles.separator} />
@@ -568,28 +570,32 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
       <View wrap={false}>
       {/* Totals */}
-      <View style={styles.totalsSection}>
-        <View style={styles.totalsBox}>
-          <View style={styles.totalRow}>
-            <Text>Imponibile</Text>
-            <Text>€ {quote.subtotal.toFixed(2)}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text>IVA</Text>
-            <Text>€ {quote.vatTotal.toFixed(2)}</Text>
-          </View>
-          <View style={styles.grandTotal}>
-            <Text>TOTALE</Text>
-            <Text>€ {quote.total.toFixed(2)}</Text>
+      {quote.showTotals !== false && (
+        <View style={styles.totalsSection}>
+          <View style={styles.totalsBox}>
+            <View style={styles.totalRow}>
+              <Text>Imponibile</Text>
+              <Text>€ {quote.subtotal.toFixed(2)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text>IVA</Text>
+              <Text>€ {quote.vatTotal.toFixed(2)}</Text>
+            </View>
+            <View style={styles.grandTotal}>
+              <Text>TOTALE</Text>
+              <Text>€ {quote.total.toFixed(2)}</Text>
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {/* Leasing Section */}
       {quote.leasing && (
         <View style={styles.leasingContainer} wrap={false}>
           <View style={styles.leasingHeaderBox}>
-            <Text style={styles.leasingTitle}>PIANO LEASING</Text>
+            <Text style={styles.leasingTitle}>
+              {quote.leasing.type === 'financing' ? 'PIANO FINANZIAMENTO' : 'PIANO LEASING'}
+            </Text>
           </View>
           <View style={styles.leasingBody}>
             <View style={styles.leasingColumns}>

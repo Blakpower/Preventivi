@@ -21,12 +21,14 @@ export const Customers: React.FC = () => {
     let query = supabase
       .from('customers')
       .select('*')
-      .eq('ownerUserId', uid)
-      .order('name', { ascending: true });
+      .eq('ownerUserId', uid);
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,vat.ilike.%${search}%`);
     }
+
+    // Apply order last
+    query = query.order('name', { ascending: true });
 
     const { data, error } = await query;
     if (error) {

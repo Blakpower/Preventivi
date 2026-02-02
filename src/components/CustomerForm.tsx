@@ -57,11 +57,10 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ initialData, onSubmi
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">P.IVA / Codice Fiscale</label>
               <input
-                {...register('vat', { required: 'La P.IVA o il Codice Fiscale sono obbligatori' })}
+                {...register('vat')}
                 className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 bg-slate-50 border transition-colors"
                 placeholder="IT12345678901"
               />
-              {errors.vat && <p className="text-red-500 text-xs mt-1 font-medium">{errors.vat.message}</p>}
             </div>
 
             <div>

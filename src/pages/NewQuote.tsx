@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
 import { LeasingForm } from '../components/LeasingForm';
+import { CustomerForm } from '../components/CustomerForm';
 
 export const NewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export const NewQuote: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [showLeasing, setShowLeasing] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +59,7 @@ export const NewQuote: React.FC = () => {
           .from('customers')
           .select('*')
           .eq('ownerUserId', uid)
+          .order('name', { ascending: true })
           .abortSignal(controller.signal);
         if (customersData) setCustomers(customersData);
       } catch (e) {
@@ -113,7 +116,8 @@ export const NewQuote: React.FC = () => {
       'number','date','items','attachments',
       'customerName','customerAddress','customerVat',
       'tocTextAbove','tocText','premessaText','softwareText',
-      'descrizioneProdottiText','conditionsList','leasing','attachmentsPosition'
+      'descrizioneProdottiText','conditionsList','leasing','attachmentsPosition',
+      'showTotals', 'notes'
     ],
   });
   useEffect(() => {
@@ -136,6 +140,8 @@ export const NewQuote: React.FC = () => {
         conditionsList: candidate.conditionsList,
         leasing: candidate.leasing,
         attachmentsPosition: candidate.attachmentsPosition,
+        showTotals: candidate.showTotals,
+        notes: candidate.notes,
       };
       const serialized = JSON.stringify(subset);
       if (serialized !== lastSerialized.current) {
@@ -353,6 +359,30 @@ export const NewQuote: React.FC = () => {
       setValue('customerVat', customer.vat);
       setValue('customerAddress', customer.address);
       clearErrors(['customerName', 'customerVat', 'customerAddress']);
+    }
+  };
+
+  const handleCreateCustomer = async (data: Omit<Customer, 'id'>) => {
+    const uid = getCurrentUserId();
+    if (!uid) return;
+
+    try {
+      const { data: newCustomer, error } = await supabase
+        .from('customers')
+        .insert([{ ...data, ownerUserId: uid }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (newCustomer) {
+        setCustomers(prev => [...prev, newCustomer].sort((a, b) => a.name.localeCompare(b.name)));
+        onCustomerSelect(String(newCustomer.id));
+        setIsCustomerModalOpen(false);
+      }
+    } catch (error: any) {
+      console.error('Error creating customer:', error);
+      alert('Errore durante la creazione del cliente: ' + error.message);
     }
   };
 
@@ -612,15 +642,25 @@ export const NewQuote: React.FC = () => {
 
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Seleziona da Database (Opzionale)</label>
-                <select
-                  onChange={(e) => onCustomerSelect(e.target.value)}
-                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-white border transition-colors"
-                >
-                  <option value="">-- Seleziona un cliente salvato --</option>
-                  {customers?.map(c => (
-                    <option key={c.id} value={c.id}>{c.name} {c.vat ? `(${c.vat})` : ''}</option>
-                  ))}
-                </select>
+                <div className="flex space-x-2">
+                  <select
+                    onChange={(e) => onCustomerSelect(e.target.value)}
+                    className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-white border transition-colors"
+                  >
+                    <option value="">-- Seleziona un cliente salvato --</option>
+                    {customers?.map(c => (
+                      <option key={c.id} value={c.id}>{c.name} {c.vat ? `(${c.vat})` : ''}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="flex-none bg-blue-600 text-white p-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center"
+                    title="Crea nuovo cliente"
+                  >
+                    <Plus size={20} />
+                  </button>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -755,6 +795,8 @@ export const NewQuote: React.FC = () => {
                               conditionsList: candidate.conditionsList,
                               leasing: candidate.leasing,
                               attachmentsPosition: candidate.attachmentsPosition,
+                              showTotals: candidate.showTotals,
+                              notes: candidate.notes,
                             };
                             setPreviewValues(candidate);
                             lastSerialized.current = JSON.stringify(subset);
@@ -1157,6 +1199,20 @@ export const NewQuote: React.FC = () => {
                   </div>
                 )}
               </div>
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                 <label className="block text-sm font-semibold text-slate-700 mb-2">Opzioni Offerta Economica</label>
+                 <div className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      id="showTotals"
+                      {...register('showTotals')}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <label htmlFor="showTotals" className="text-sm text-slate-700 select-none cursor-pointer">
+                      Mostra riepilogo totali (Imponibile, IVA, Totale) nel PDF
+                    </label>
+                 </div>
+              </div>
             </div>
           </div>
 
@@ -1292,6 +1348,13 @@ export const NewQuote: React.FC = () => {
           </div>
         </div>
       </form>
+
+      {isCustomerModalOpen && (
+        <CustomerForm
+          onSubmit={handleCreateCustomer}
+          onCancel={() => setIsCustomerModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

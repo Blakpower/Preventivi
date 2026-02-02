@@ -43,6 +43,30 @@ export const LeasingForm: React.FC<Props> = ({ form }) => {
         <h2 className="text-lg font-bold text-slate-800">Dati Leasing</h2>
       </div>
 
+      <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <label className="block text-sm font-bold text-slate-700 mb-3">Tipo Piano</label>
+        <div className="flex space-x-6">
+          <label className="flex items-center space-x-2 cursor-pointer group">
+            <input
+              type="radio"
+              value="leasing"
+              {...register('leasing.type')}
+              className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 transition-all"
+            />
+            <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600 transition-colors">Leasing</span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer group">
+            <input
+              type="radio"
+              value="financing"
+              {...register('leasing.type')}
+              className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500 transition-all"
+            />
+            <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600 transition-colors">Finanziamento</span>
+          </label>
+        </div>
+      </div>
+
       <div className="space-y-8">
         {/* 1) Parametri economici base */}
         <div>

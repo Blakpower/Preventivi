@@ -16,13 +16,18 @@ export const Quotes: React.FC = () => {
     const fetchSettings = async () => {
       const uid = getCurrentUserId();
       if (!uid) return;
-      const { data } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('userId', uid)
-        .abortSignal(controller.signal)
-        .single();
-      if (data) setSettings(data);
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('*')
+          .eq('userId', uid)
+          .abortSignal(controller.signal)
+          .single();
+        if (data) setSettings(data);
+      } catch (err: any) {
+        if (err.name === 'AbortError' || err.message?.includes('Abort')) return;
+        // console.error('Error fetching settings:', err);
+      }
     };
     fetchSettings();
     return () => controller.abort();
@@ -34,32 +39,44 @@ export const Quotes: React.FC = () => {
       const uid = getCurrentUserId();
       if (!uid) return;
       
-      let query = supabase
-        .from('quotes')
-        .select('*')
-        .eq('ownerUserId', uid)
-        .order('date', { ascending: false })
-        .abortSignal(controller.signal);
+      try {
+        let query = supabase
+          .from('quotes')
+          .select('*')
+          .eq('ownerUserId', uid)
+          .order('createdAt', { ascending: false })
+          .abortSignal(controller.signal);
 
-      if (search) {
-        // Supabase text search is basic with 'ilike'. For multiple fields OR condition:
-        // .or(`customerName.ilike.%${search}%,number.ilike.%${search}%`)
-        query = query.or(`customerName.ilike.%${search}%,number.ilike.%${search}%`);
-      }
+        if (search) {
+          // Supabase text search is basic with 'ilike'. For multiple fields OR condition:
+          // .or(`customerName.ilike.%${search}%,number.ilike.%${search}%`)
+          query = query.or(`customerName.ilike.%${search}%,number.ilike.%${search}%`);
+        }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching quotes:', error);
-      } else {
-        // Parse date strings back to Date objects if needed, 
-        // though usually strings are fine for display if we handle them.
-        // But the Quote interface likely expects Date objects for the 'date' field.
-        // Let's map them.
-        const typedQuotes = (data || []).map((q: any) => ({
-          ...q,
-          date: new Date(q.date)
-        }));
-        setQuotes(typedQuotes);
+        const { data, error } = await query;
+        
+        if (error) {
+           // Check if it's an abort error (though usually it throws)
+           if (error.message && (error.message.includes('AbortError') || error.message.includes('aborted'))) return;
+           console.error('Error fetching quotes:', error);
+           return;
+        }
+
+        if (data) {
+          // Parse date strings back to Date objects if needed, 
+          // though usually strings are fine for display if we handle them.
+          // But the Quote interface likely expects Date objects for the 'date' field.
+          // Let's map them.
+          const typedQuotes = (data || []).map((q: any) => ({
+            ...q,
+            date: new Date(q.date)
+          }));
+          setQuotes(typedQuotes);
+        }
+      } catch (err: any) {
+        // Handle abort exception
+        if (err.name === 'AbortError' || err.message?.includes('Abort')) return;
+        console.error('Error fetching quotes (exception):', err);
       }
     };
     fetchQuotes();

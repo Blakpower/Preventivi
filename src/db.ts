@@ -97,9 +97,11 @@ export interface Quote {
   attachmentsPosition?: 'before' | 'after';
   customerId?: number;
   leasing?: LeasingData;
+  showTotals?: boolean;
 }
 
 export interface LeasingData {
+  type?: 'leasing' | 'financing';
   // 1) Parametri economici base
   assetValue?: number;
   vatRate?: number;
