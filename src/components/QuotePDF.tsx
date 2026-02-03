@@ -568,10 +568,10 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         ))}
       </View>
 
-      <View wrap={false}>
+      <View>
       {/* Totals */}
       {quote.showTotals !== false && (
-        <View style={styles.totalsSection}>
+        <View style={styles.totalsSection} wrap={false}>
           <View style={styles.totalsBox}>
             <View style={styles.totalRow}>
               <Text>Imponibile</Text>
@@ -694,7 +694,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       )}
 
-      <View style={{ marginTop: 20 }}>
+      <View style={{ marginTop: 20 }} wrap={false}>
         <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
         
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>

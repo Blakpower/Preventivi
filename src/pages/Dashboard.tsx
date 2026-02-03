@@ -54,18 +54,28 @@ export const Dashboard: React.FC = () => {
         .eq('ownerUserId', uid)
         .abortSignal(controller.signal);
 
-      if (quotesError) console.error(quotesError);
-      if (recentError) console.error(recentError);
-      if (articlesError) console.error(articlesError);
+      const isAbortError = (err: any) => err?.name === 'AbortError' || String(err?.message).includes('Abort');
 
-      setStats({
-        quotesCount,
-        articlesCount: articlesCount || 0,
-        totalValue,
-        recentQuotes
-      });
+      if (quotesError && !isAbortError(quotesError)) console.error(quotesError);
+      if (recentError && !isAbortError(recentError)) console.error(recentError);
+      if (articlesError && !isAbortError(articlesError)) console.error(articlesError);
+
+      if (!controller.signal.aborted) {
+        setStats({
+          quotesCount,
+          articlesCount: articlesCount || 0,
+          totalValue,
+          recentQuotes
+        });
+      }
     };
-    fetchStats();
+    
+    fetchStats().catch(e => {
+      if (e?.name !== 'AbortError' && !String(e?.message).includes('Abort')) {
+        console.error('Error in Dashboard fetch:', e);
+      }
+    });
+    
     return () => controller.abort();
   }, []);
 
