@@ -790,6 +790,56 @@ export const NewQuote: React.FC = () => {
                   placeholder="Note visibili sul preventivo (es. validità offerta, tempi consegna...)"
                 />
               </div>
+
+              {/* Admin Signature */}
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Firma Amministratore</label>
+                <input
+                  type="file"
+                  accept="image/png"
+                  onChange={async (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      const reader = new FileReader();
+                      reader.onload = () => setValue('adminSignature', reader.result as string, { shouldDirty: true });
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"
+                />
+                {watch('adminSignature') && (
+                  <div className="space-y-2">
+                    <div className="relative border border-slate-200 rounded-lg p-2 bg-slate-50">
+                      <img 
+                        src={watch('adminSignature')} 
+                        alt="Firma" 
+                        className="h-16 object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setValue('adminSignature', undefined, { shouldDirty: true })}
+                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm text-slate-400 hover:text-red-500"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">
+                        Scala Firma: {watch('adminSignatureScale') || 100}%
+                      </label>
+                      <input
+                        type="range"
+                        min="50"
+                        max="200"
+                        step="5"
+                        defaultValue={100}
+                        {...register('adminSignatureScale', { valueAsNumber: true })}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
               
               {settings && (
                 <div className="mt-8">
@@ -831,6 +881,8 @@ export const NewQuote: React.FC = () => {
                               attachmentsPosition: candidate.attachmentsPosition,
                               showTotals: candidate.showTotals,
                               notes: candidate.notes,
+                              adminSignature: candidate.adminSignature,
+                              adminSignatureScale: candidate.adminSignatureScale,
                             };
                             setPreviewValues(candidate);
                             lastSerialized.current = JSON.stringify(subset);
@@ -855,6 +907,8 @@ export const NewQuote: React.FC = () => {
                           softwareImageScale: Number(previewValues.softwareImageScale || 100),
                           targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
                           descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
+                          adminSignature: previewValues.adminSignature,
+                          adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
                         } as Quote}
                         settings={settings}
                       />

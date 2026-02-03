@@ -696,9 +696,29 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
       <View style={{ marginTop: 20 }}>
         <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
-        <View style={{ marginTop: 10, alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 11, marginBottom: 50 }}>Firma per accettazione</Text>
-          <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
+        
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
+          {/* Left: Admin Signature */}
+          <View style={{ alignItems: 'flex-start' }}>
+            <Text style={{ fontSize: 11, marginBottom: quote.adminSignature ? 5 : 50 }}>Firma Amministratore</Text>
+            {quote.adminSignature ? (
+              <Image 
+                src={quote.adminSignature} 
+                style={{ 
+                  width: 150 * ((quote.adminSignatureScale || 100) / 100),
+                  height: 'auto',
+                  marginBottom: 5
+                }} 
+              />
+            ) : null}
+            <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
+          </View>
+
+          {/* Right: Customer Signature */}
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 11, marginBottom: 50 }}>Firma per accettazione</Text>
+            <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
+          </View>
         </View>
       </View>
       </View>

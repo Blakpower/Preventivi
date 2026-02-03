@@ -98,6 +98,8 @@ export interface Quote {
   customerId?: number;
   leasing?: LeasingData;
   showTotals?: boolean;
+  adminSignature?: string;
+  adminSignatureScale?: number;
 }
 
 export interface LeasingData {
