@@ -1,11 +1,22 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useBeforeUnload, useBlocker } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
-import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { PDFViewer } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
+
+const MemoizedPDFPreview = React.memo(({ quote, settings }: { quote: Quote, settings: Settings | undefined }) => {
+  if (!settings) return <div className="h-[420px] flex items-center justify-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">Caricamento anteprima...</div>;
+  return (
+    <PDFViewer style={{ width: '100%', height: 420 }}>
+      <QuotePDF quote={quote} settings={settings} />
+    </PDFViewer>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.quote === nextProps.quote && prevProps.settings === nextProps.settings;
+});
 import { LeasingForm } from '../components/LeasingForm';
 import { CustomerForm } from '../components/CustomerForm';
 import { ArticleForm } from '../components/ArticleForm';
@@ -74,7 +85,7 @@ export const NewQuote: React.FC = () => {
     return () => controller.abort();
   }, []);
 
-  const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors }, clearErrors } = useForm<Quote>({
+  const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors, isDirty: isFormDirty }, clearErrors } = useForm<Quote>({
     defaultValues: {
       date: new Date(),
       items: [],
@@ -108,10 +119,33 @@ export const NewQuote: React.FC = () => {
     }
   });
 
-  const watchedValues = watch();
+  // Optimize: Do not watch everything globally to prevent re-renders on every keystroke
+  // const watchedValues = watch(); 
+  
   const [autoPreview, setAutoPreview] = useState(false);
   const lastSerialized = useRef<string>('');
-  const [previewValues, setPreviewValues] = useState(watchedValues);
+  const [previewValues, setPreviewValues] = useState<Quote>(getValues());
+  
+  // Exit Confirmation Logic
+  const isDirty = Object.keys(errors).length > 0 || isFormDirty;
+  
+  useBeforeUnload(
+    React.useCallback(
+      (e) => {
+        if (isDirty) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      },
+      [isDirty]
+    )
+  );
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      isDirty && currentLocation.pathname !== nextLocation.pathname
+  );
+
   const watchedFields = useWatch({
     control,
     name: [
@@ -895,24 +929,22 @@ export const NewQuote: React.FC = () => {
                     </div>
                   </div>
                   <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  <PDFViewer style={{ width: '100%', height: 420 }}>
-                      <QuotePDF
-                        quote={{
-                          ...previewValues,
-                          number: previewValues.number || getValues('number') || '',
-                          date: previewValues.date || getValues('date') || new Date(),
-                          createdAt: new Date(),
-                          items: previewValues.items || [],
-                          attachments: previewValues.attachments || [],
-                          softwareImageScale: Number(previewValues.softwareImageScale || 100),
-                          targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
-                          descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
-                          adminSignature: previewValues.adminSignature,
-                          adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
-                        } as Quote}
-                        settings={settings}
-                      />
-                    </PDFViewer>
+                  <MemoizedPDFPreview
+                      quote={{
+                        ...previewValues,
+                        number: previewValues.number || '',
+                        date: previewValues.date || new Date(),
+                        createdAt: new Date(),
+                        items: previewValues.items || [],
+                        attachments: previewValues.attachments || [],
+                        softwareImageScale: Number(previewValues.softwareImageScale || 100),
+                        targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
+                        descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
+                        adminSignature: previewValues.adminSignature,
+                        adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
+                      } as Quote}
+                      settings={settings}
+                    />
                   </div>
                 </div>
               )}
@@ -1459,6 +1491,35 @@ export const NewQuote: React.FC = () => {
           onSubmit={handleCreateArticle}
           onCancel={() => setIsArticleModalOpen(false)}
         />
+      )}
+
+      {/* Exit Confirmation Modal */}
+      {blocker.state === "blocked" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center space-x-3 text-amber-600 mb-4">
+              <AlertTriangle size={24} />
+              <h3 className="text-lg font-bold text-slate-800">Sei sicuro di voler uscire?</h3>
+            </div>
+            <p className="text-slate-600 mb-6">
+              Hai delle modifiche non salvate. Se esci ora, perderai tutti i dati inseriti.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => blocker.reset()}
+                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={() => blocker.proceed()}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700 transition-colors"
+              >
+                Esci senza salvare
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
