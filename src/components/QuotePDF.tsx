@@ -548,6 +548,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {renderHeader()}
       <Text style={styles.sectionTitle}>3. OFFERTA ECONOMICA</Text>
 
+      <View>
       {/* Items Table */}
       <View style={styles.table}>
         <View style={styles.tableHeader}>
@@ -677,6 +678,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       )}
 
+      </View>
+      </View>
+
       {/* Bank Info - Moved to Header */}
 
       {/* Conditions inline below economic offer */}
@@ -720,7 +724,6 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
             <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
           </View>
         </View>
-      </View>
       </View>
 
       {/* Footer */}
