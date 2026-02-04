@@ -39,7 +39,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <div className="bg-blue-600 p-2 rounded-lg">
             <FileText size={24} className="text-white" />
           </div>
-          <span className="text-2xl font-bold tracking-tight">Preventivi<span className="text-blue-500">Pro</span></span>
+          <span className="text-2xl font-bold tracking-tight">Esse Group <span className="text-blue-500">Preventivi</span></span>
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -80,7 +80,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div className="flex-1 flex flex-col overflow-hidden h-screen relative">
         {/* Mobile Header (visible only on small screens) */}
         <header className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center shadow-md z-10">
-          <span className="font-bold text-xl">PreventiviPro</span>
+          <span className="font-bold text-xl">Esse Group Preventivi</span>
           <button className="p-2">
             <Menu size={24} />
           </button>

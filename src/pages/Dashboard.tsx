@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, type Quote, getCurrentUserId } from '../db';
-import { FileText, Database, TrendingUp, ArrowUpRight, Plus } from 'lucide-react';
+import { FileText, ArrowUpRight, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 
@@ -17,18 +17,6 @@ export const Dashboard: React.FC = () => {
       if (!uid) return;
 
       // Fetch quotes for stats and recent list
-      
-      const { data: allQuotesData, error: quotesError } = await supabase
-        .from('quotes')
-        .select('id', { count: 'exact', head: true })
-        .eq('ownerUserId', uid)
-        .abortSignal(controller.signal);
-
-      const quotesCount = allQuotesData?.length || 0; // Using length if count not available in head mode response structure usually requires count property but here we might just get null data. 
-      // Actually with head:true, data is null, count is returned.
-      // Wait, supabase js v2 returns count property on the object if requested.
-      // Let's use the count property from the response if we used { count: 'exact', head: true }
-      // The destructuring above: const { count, error } = ...
       
       const { count: qCount, error: qError } = await supabase
         .from('quotes')
