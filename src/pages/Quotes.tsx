@@ -42,7 +42,7 @@ export const Quotes: React.FC = () => {
       try {
         let query = supabase
           .from('quotes')
-          .select('*')
+          .select('id, number, date, customerName, total, createdAt, ownerUserId')
           .eq('ownerUserId', uid)
           .order('createdAt', { ascending: false })
           .abortSignal(controller.signal);
@@ -101,7 +101,27 @@ export const Quotes: React.FC = () => {
       return;
     }
     try {
-      const blob = await pdf(<QuotePDF quote={quote} settings={settings} />).toBlob();
+      // Fetch full quote data on demand for PDF generation
+      const { data: fullQuote, error } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('id', quote.id!)
+        .single();
+
+      if (error || !fullQuote) {
+        console.error('Error fetching full quote for PDF:', error);
+        alert('Errore nel recupero dei dati completi del preventivo');
+        return;
+      }
+
+      // Convert date string back to Date object if needed (Supabase returns strings)
+      const quoteWithDates = {
+        ...fullQuote,
+        date: new Date(fullQuote.date),
+        // Ensure other date fields are handled if they exist
+      };
+
+      const blob = await pdf(<QuotePDF quote={quoteWithDates} settings={settings} />).toBlob();
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
