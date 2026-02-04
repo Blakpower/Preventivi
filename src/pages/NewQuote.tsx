@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useNavigate, useParams, useBeforeUnload, useBlocker } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
-import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
@@ -250,7 +250,7 @@ export const NewQuote: React.FC = () => {
     return () => clearTimeout(t);
   }, [autoPreview, watchedFields]);
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, move } = useFieldArray({
     control,
     name: 'items'
   });
@@ -1101,7 +1101,7 @@ export const NewQuote: React.FC = () => {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Prezzo (€)</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">IVA (%)</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-32">Totale (€)</th>
-                  <th className="px-4 py-3 w-12"></th>
+                  <th className="px-4 py-3 w-24"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -1174,16 +1174,39 @@ export const NewQuote: React.FC = () => {
                       />
                     </td>
                     <td className="p-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          remove(index);
-                          recalcTotals();
-                        }}
-                        className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex items-center justify-end space-x-1">
+                        <div className="flex flex-col space-y-1 mr-2">
+                          <button
+                            type="button"
+                            onClick={() => move(index, index - 1)}
+                            disabled={index === 0}
+                            className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-0.5"
+                            title="Sposta su"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => move(index, index + 1)}
+                            disabled={index === fields.length - 1}
+                            className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-0.5"
+                            title="Sposta giù"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            remove(index);
+                            recalcTotals();
+                          }}
+                          className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all"
+                          title="Elimina riga"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -47,7 +47,7 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ initialData, onSubmi
             <div className="md:col-span-2">
               <label className="block text-sm font-semibold text-slate-700 mb-1">Indirizzo Completo</label>
               <input
-                {...register('address', { required: 'L\'indirizzo è obbligatorio' })}
+                {...register('address')}
                 className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2.5 px-3 bg-slate-50 border transition-colors"
                 placeholder="Via Roma 1, 00100 Roma (RM)"
               />
