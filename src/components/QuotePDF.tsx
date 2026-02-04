@@ -700,7 +700,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
           {/* Left: Admin Signature */}
           <View style={{ alignItems: 'flex-start' }}>
-            <Text style={{ fontSize: 11, marginBottom: quote.adminSignature ? 5 : 50 }}>Firma Amministratore</Text>
+            <Text style={{ fontSize: 11, marginBottom: quote.adminSignature ? 5 : 50 }}>L'Amministratore</Text>
             {quote.adminSignature ? (
               <Image 
                 src={quote.adminSignature} 

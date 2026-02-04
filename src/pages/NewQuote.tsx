@@ -793,7 +793,7 @@ export const NewQuote: React.FC = () => {
 
               {/* Admin Signature */}
               <div className="mt-8 pt-6 border-t border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Firma Amministratore</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">L'Amministratore</label>
                 <input
                   type="file"
                   accept="image/png"
