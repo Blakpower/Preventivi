@@ -8,3 +8,6 @@ ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "showTotals" boolean DEFAULT true;
 -- Add adminSignature and adminSignatureScale columns to quotes table
 ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "adminSignature" text;
 ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "adminSignatureScale" integer DEFAULT 100;
+
+-- Update Customers Table to make address optional
+ALTER TABLE "customers" ALTER COLUMN "address" DROP NOT NULL;

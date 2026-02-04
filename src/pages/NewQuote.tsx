@@ -185,6 +185,7 @@ export const NewQuote: React.FC = () => {
   // const watchedValues = watch(); 
   
   const [autoPreview, setAutoPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const lastSerialized = useRef<string>('');
   const [previewValues, setPreviewValues] = useState<Quote>(getValues());
   
@@ -983,69 +984,87 @@ export const NewQuote: React.FC = () => {
                       <span className="text-sm font-semibold text-slate-700">Anteprima PDF</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <label className="text-xs text-slate-600 flex items-center space-x-1">
+                      <label className="text-xs text-slate-600 flex items-center space-x-1 cursor-pointer select-none">
                         <input
                           type="checkbox"
-                          checked={autoPreview}
-                          onChange={(e) => setAutoPreview(e.target.checked)}
+                          checked={showPreview}
+                          onChange={(e) => setShowPreview(e.target.checked)}
                           className="rounded"
                         />
-                        <span>Auto</span>
+                        <span className="font-medium">Attiva Anteprima</span>
                       </label>
-                      {!autoPreview && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const candidate = getValues();
-                            const subset = {
-                              number: candidate.number,
-                              date: candidate.date,
-                              items: candidate.items,
-                              attachments: candidate.attachments,
-                              customerName: candidate.customerName,
-                              customerAddress: candidate.customerAddress,
-                              customerVat: candidate.customerVat,
-                              tocTextAbove: candidate.tocTextAbove,
-                              tocText: candidate.tocText,
-                              premessaText: candidate.premessaText,
-                              softwareText: candidate.softwareText,
-                              descrizioneProdottiText: candidate.descrizioneProdottiText,
-                              conditionsList: candidate.conditionsList,
-                              leasing: candidate.leasing,
-                              attachmentsPosition: candidate.attachmentsPosition,
-                              showTotals: candidate.showTotals,
-                              notes: candidate.notes,
-                              adminSignature: candidate.adminSignature,
-                              adminSignatureScale: candidate.adminSignatureScale,
-                            };
-                            setPreviewValues(candidate);
-                            lastSerialized.current = JSON.stringify(subset);
-                          }}
-                          className="text-xs px-2 py-1 rounded-md border border-slate-200 hover:bg-slate-50"
-                        >
-                          Aggiorna ora
-                        </button>
+
+                      {showPreview && (
+                        <>
+                          <div className="h-4 w-px bg-slate-300 mx-1"></div>
+                          <label className="text-xs text-slate-600 flex items-center space-x-1">
+                            <input
+                              type="checkbox"
+                              checked={autoPreview}
+                              onChange={(e) => setAutoPreview(e.target.checked)}
+                              className="rounded"
+                            />
+                            <span>Auto</span>
+                          </label>
+                          {!autoPreview && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const candidate = getValues();
+                                const subset = {
+                                  number: candidate.number,
+                                  date: candidate.date,
+                                  items: candidate.items,
+                                  attachments: candidate.attachments,
+                                  customerName: candidate.customerName,
+                                  customerAddress: candidate.customerAddress,
+                                  customerVat: candidate.customerVat,
+                                  tocTextAbove: candidate.tocTextAbove,
+                                  tocText: candidate.tocText,
+                                  premessaText: candidate.premessaText,
+                                  softwareText: candidate.softwareText,
+                                  descrizioneProdottiText: candidate.descrizioneProdottiText,
+                                  conditionsList: candidate.conditionsList,
+                                  leasing: candidate.leasing,
+                                  attachmentsPosition: candidate.attachmentsPosition,
+                                  showTotals: candidate.showTotals,
+                                  notes: candidate.notes,
+                                  adminSignature: candidate.adminSignature,
+                                  adminSignatureScale: candidate.adminSignatureScale,
+                                };
+                                setPreviewValues(candidate);
+                                lastSerialized.current = JSON.stringify(subset);
+                              }}
+                              className="text-xs px-2 py-1 rounded-md border border-slate-200 hover:bg-slate-50"
+                            >
+                              Aggiorna ora
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                  <MemoizedPDFPreview
-                      quote={{
-                        ...previewValues,
-                        number: previewValues.number || '',
-                        date: previewValues.date || new Date(),
-                        createdAt: new Date(),
-                        items: previewValues.items || [],
-                        attachments: previewValues.attachments || [],
-                        softwareImageScale: Number(previewValues.softwareImageScale || 100),
-                        targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
-                        descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
-                        adminSignature: previewValues.adminSignature,
-                        adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
-                      } as Quote}
-                      settings={settings}
-                    />
-                  </div>
+                  
+                  {showPreview && (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                    <MemoizedPDFPreview
+                        quote={{
+                          ...previewValues,
+                          number: previewValues.number || '',
+                          date: previewValues.date || new Date(),
+                          createdAt: new Date(),
+                          items: previewValues.items || [],
+                          attachments: previewValues.attachments || [],
+                          softwareImageScale: Number(previewValues.softwareImageScale || 100),
+                          targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
+                          descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
+                          adminSignature: previewValues.adminSignature,
+                          adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
+                        } as Quote}
+                        settings={settings}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1174,25 +1193,25 @@ export const NewQuote: React.FC = () => {
                       />
                     </td>
                     <td className="p-3 text-center">
-                      <div className="flex items-center justify-end space-x-1">
-                        <div className="flex flex-col space-y-1 mr-2">
+                      <div className="flex items-center justify-end space-x-2">
+                        <div className="flex flex-col gap-1 mr-1">
                           <button
                             type="button"
                             onClick={() => move(index, index - 1)}
                             disabled={index === 0}
-                            className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-0.5"
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 disabled:opacity-30 disabled:hover:bg-blue-100 disabled:text-blue-400 p-1.5 rounded-md transition-colors shadow-sm"
                             title="Sposta su"
                           >
-                            <ArrowUp size={14} />
+                            <ArrowUp size={16} />
                           </button>
                           <button
                             type="button"
                             onClick={() => move(index, index + 1)}
                             disabled={index === fields.length - 1}
-                            className="text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:hover:text-slate-400 p-0.5"
+                            className="bg-blue-100 hover:bg-blue-200 text-blue-700 disabled:opacity-30 disabled:hover:bg-blue-100 disabled:text-blue-400 p-1.5 rounded-md transition-colors shadow-sm"
                             title="Sposta giù"
                           >
-                            <ArrowDown size={14} />
+                            <ArrowDown size={16} />
                           </button>
                         </div>
                         <button
