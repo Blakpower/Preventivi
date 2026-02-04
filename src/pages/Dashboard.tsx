@@ -7,8 +7,6 @@ import { format } from 'date-fns';
 export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState({
     quotesCount: 0,
-    articlesCount: 0,
-    totalValue: 0,
     recentQuotes: [] as Quote[]
   });
 
@@ -19,19 +17,24 @@ export const Dashboard: React.FC = () => {
       if (!uid) return;
 
       // Fetch quotes for stats and recent list
-      // We'll fetch all totals for sum, but only full details for recent 5
-      // Optimally:
-      // 1. Count and Sum: Fetch all 'total'
-      // 2. Recent: Fetch top 5
       
       const { data: allQuotesData, error: quotesError } = await supabase
         .from('quotes')
-        .select('total, createdAt')
+        .select('id', { count: 'exact', head: true })
         .eq('ownerUserId', uid)
         .abortSignal(controller.signal);
 
-      const quotesCount = allQuotesData?.length || 0;
-      const totalValue = allQuotesData?.reduce((acc, q) => acc + (q.total || 0), 0) || 0;
+      const quotesCount = allQuotesData?.length || 0; // Using length if count not available in head mode response structure usually requires count property but here we might just get null data. 
+      // Actually with head:true, data is null, count is returned.
+      // Wait, supabase js v2 returns count property on the object if requested.
+      // Let's use the count property from the response if we used { count: 'exact', head: true }
+      // The destructuring above: const { count, error } = ...
+      
+      const { count: qCount, error: qError } = await supabase
+        .from('quotes')
+        .select('*', { count: 'exact', head: true })
+        .eq('ownerUserId', uid)
+        .abortSignal(controller.signal);
 
       const { data: recentQuotesData, error: recentError } = await supabase
         .from('quotes')
@@ -47,24 +50,14 @@ export const Dashboard: React.FC = () => {
         createdAt: new Date(q.createdAt)
       }));
 
-      // Fetch articles count
-      const { count: articlesCount, error: articlesError } = await supabase
-        .from('articles')
-        .select('*', { count: 'exact', head: true })
-        .eq('ownerUserId', uid)
-        .abortSignal(controller.signal);
-
       const isAbortError = (err: any) => err?.name === 'AbortError' || String(err?.message).includes('Abort');
 
-      if (quotesError && !isAbortError(quotesError)) console.error(quotesError);
+      if (qError && !isAbortError(qError)) console.error(qError);
       if (recentError && !isAbortError(recentError)) console.error(recentError);
-      if (articlesError && !isAbortError(articlesError)) console.error(articlesError);
 
       if (!controller.signal.aborted) {
         setStats({
-          quotesCount,
-          articlesCount: articlesCount || 0,
-          totalValue,
+          quotesCount: qCount || 0,
           recentQuotes
         });
       }
@@ -84,22 +77,13 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Bentornato, Admin</h1>
-          <p className="text-slate-500 mt-1">Ecco cosa succede oggi nella tua attività.</p>
-        </div>
-        <Link 
-          to="/quotes/new"
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center space-x-2 font-medium"
-        >
-          <Plus size={20} />
-          <span>Nuovo Preventivo</span>
-        </Link>
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Bentornato, Admin</h1>
+        <p className="text-slate-500 mt-1">Ecco cosa succede oggi nella tua attività.</p>
       </div>
       
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-blue-50 rounded-xl text-blue-600">
@@ -115,33 +99,19 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
-              <TrendingUp size={24} />
+        <Link
+          to="/quotes/new"
+          className="bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 hover:shadow-xl hover:scale-[1.02] transition-all p-6 flex flex-col items-center justify-center text-white group cursor-pointer relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative z-10 flex flex-col items-center">
+            <div className="p-4 bg-white/20 rounded-full mb-3 backdrop-blur-sm group-hover:bg-white/30 transition-colors">
+              <Plus size={48} className="text-white" />
             </div>
-            <span className="flex items-center text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              <ArrowUpRight size={14} className="mr-1" /> +5%
-            </span>
+            <h3 className="text-2xl font-bold mb-1">Nuovo Preventivo</h3>
+            <p className="text-blue-100 font-medium">Crea un nuovo documento</p>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Fatturato Potenziale</p>
-            <h3 className="text-3xl font-bold text-slate-900 mt-1">€ {stats.totalValue.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h3>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-violet-50 rounded-xl text-violet-600">
-              <Database size={24} />
-            </div>
-            <span className="text-xs font-medium text-slate-400">Database</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500">Articoli in Catalogo</p>
-            <h3 className="text-3xl font-bold text-slate-900 mt-1">{stats.articlesCount}</h3>
-          </div>
-        </div>
+        </Link>
       </div>
 
       {/* Recent Activity Section */}
@@ -158,11 +128,11 @@ export const Dashboard: React.FC = () => {
                 <tr>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cliente</th>
                   <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Data</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Importo</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Stato</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Totale</th>
+                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Azioni</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="bg-white divide-y divide-slate-100">
                 {stats.recentQuotes?.map((quote) => (
                   <tr key={quote.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
@@ -179,13 +149,18 @@ export const Dashboard: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-slate-500">
                       {format(quote.date, 'dd MMM yyyy')}
                     </td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900">
-                      € {quote.total.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        Emesso
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-bold text-slate-900 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg">
+                        € {quote.total.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <Link 
+                        to={`/quotes/${quote.id}`}
+                        className="text-blue-600 hover:text-blue-900 font-medium text-sm hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Vedi
+                      </Link>
                     </td>
                   </tr>
                 ))}
