@@ -42,8 +42,9 @@ export const Quotes: React.FC = () => {
       try {
         let query = supabase
           .from('quotes')
-          .select('id, number, date, customerName, total, createdAt, ownerUserId')
+          .select('id, number, date, customerName, total, createdAt, ownerUserId, deletedAt')
           .eq('ownerUserId', uid)
+          .is('deletedAt', null)
           .order('createdAt', { ascending: false })
           .abortSignal(controller.signal);
 
@@ -85,7 +86,12 @@ export const Quotes: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     if (confirm('Sei sicuro di voler eliminare questo preventivo?')) {
-      const { error } = await supabase.from('quotes').delete().eq('id', id);
+      // Soft delete: update deletedAt instead of removing the record
+      const { error } = await supabase
+        .from('quotes')
+        .update({ deletedAt: new Date().toISOString() })
+        .eq('id', id);
+
       if (error) {
         console.error('Error deleting quote:', error);
         alert('Errore durante l\'eliminazione');
@@ -142,15 +148,25 @@ export const Quotes: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Preventivi</h1>
-          <p className="text-slate-500 mt-1">Gestisci e monitora tutti i tuoi preventivi emessi.</p>
+          <p className="text-slate-500 mt-1">Gestisci i tuoi preventivi e creane di nuovi.</p>
         </div>
-        <Link
-          to="/quotes/new"
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center justify-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-        >
-          <Plus size={20} />
-          <span className="font-medium">Nuovo Preventivo</span>
-        </Link>
+        
+        <div className="flex gap-2">
+          <Link
+            to="/quotes/trash"
+            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-700 rounded-xl hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"
+          >
+            <Trash2 size={20} />
+            <span className="font-medium">Cestino</span>
+          </Link>
+          <Link
+            to="/quotes/new"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+          >
+            <Plus size={20} />
+            <span className="font-medium">Nuovo Preventivo</span>
+          </Link>
+        </div>
       </div>
 
       {/* Main Card */}
@@ -215,7 +231,7 @@ export const Quotes: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center justify-end space-x-2">
                       <button 
                         onClick={() => handleDownloadPDF(quote)}
                         className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"

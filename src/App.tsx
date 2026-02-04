@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Articles } from './pages/Articles';
 import { Quotes } from './pages/Quotes';
+import { Trash } from './pages/Trash';
 import { NewQuote } from './pages/NewQuote';
 import { Customers } from './pages/Customers';
 import { SettingsPage } from './pages/Settings';
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
       {
         path: "quotes",
         element: <Quotes />
+      },
+      {
+        path: "quotes/trash",
+        element: <Trash />
       },
       {
         path: "quotes/new",

@@ -11,3 +11,6 @@ ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "adminSignatureScale" integer DEFA
 
 -- Update Customers Table to make address optional
 ALTER TABLE "customers" ALTER COLUMN "address" DROP NOT NULL;
+
+-- Add deletedAt column to quotes table for soft delete
+ALTER TABLE "quotes" ADD COLUMN IF NOT EXISTS "deletedAt" timestamp with time zone;

@@ -100,6 +100,7 @@ export interface Quote {
   showTotals?: boolean;
   adminSignature?: string;
   adminSignatureScale?: number;
+  deletedAt?: Date | null;
 }
 
 export interface LeasingData {

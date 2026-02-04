@@ -22,12 +22,14 @@ export const Dashboard: React.FC = () => {
         .from('quotes')
         .select('*', { count: 'exact', head: true })
         .eq('ownerUserId', uid)
+        .is('deletedAt', null)
         .abortSignal(controller.signal);
 
       const { data: recentQuotesData, error: recentError } = await supabase
         .from('quotes')
         .select('id, number, customerName, date, total, createdAt, ownerUserId')
         .eq('ownerUserId', uid)
+        .is('deletedAt', null)
         .order('createdAt', { ascending: false })
         .limit(5)
         .abortSignal(controller.signal);

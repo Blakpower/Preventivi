@@ -4,6 +4,7 @@ import { LayoutDashboard, FileText, Database, Settings, PlusCircle, Menu, Bell, 
 import clsx from 'clsx';
 import { supabase, getCurrentUserId, setCurrentUserId, type User } from '../db';
 import { useNavigate } from 'react-router-dom';
+import { cleanupOldTrash } from '../utils/cleanup';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
@@ -14,6 +15,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   useEffect(() => {
     const fetchUser = async () => {
       if (!uid) return;
+      
+      // Cleanup old trash in background
+      cleanupOldTrash(uid);
+
       const { data, error } = await supabase.from('users').select('*').eq('id', uid).single();
       if (!error && data) {
         setCurrentUser(data);
