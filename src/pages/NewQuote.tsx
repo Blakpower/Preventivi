@@ -4,16 +4,82 @@ import { useNavigate, useParams, useBeforeUnload, useBlocker } from 'react-route
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
 import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
-import { PDFViewer } from '@react-pdf/renderer';
+import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
+
+const PDFPreviewInner = ({ quote, settings }: { quote: Quote, settings: Settings }) => {
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    
+    const generatePdf = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const doc = <QuotePDF quote={quote} settings={settings} />;
+        const asPdf = pdf(doc);
+        const blob = await asPdf.toBlob();
+        
+        if (active) {
+          const newUrl = URL.createObjectURL(blob);
+          setUrl((prevUrl) => {
+            if (prevUrl) {
+              URL.revokeObjectURL(prevUrl);
+            }
+            return newUrl;
+          });
+        }
+      } catch (err) {
+        if (active) {
+          console.error('PDF generation error:', err);
+          setError(String(err));
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    // Use a small timeout to allow UI to update first (prevent freezing)
+    const t = setTimeout(generatePdf, 10);
+    
+    return () => {
+      active = false;
+      clearTimeout(t);
+    };
+  }, [quote, settings]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      setUrl((prevUrl) => {
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        return null;
+      });
+    };
+  }, []);
+
+  if (error) return <div className="h-[420px] flex items-center justify-center text-red-500 bg-red-50 p-4 text-sm">Errore generazione PDF: {error}</div>;
+
+  if (!url) {
+    return <div className="h-[420px] flex items-center justify-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">Generazione anteprima...</div>;
+  }
+
+  return (
+    <iframe
+      src={url}
+      style={{ width: '100%', height: 420, border: 'none' }}
+      title="Anteprima PDF"
+    />
+  );
+};
 
 const MemoizedPDFPreview = React.memo(({ quote, settings }: { quote: Quote, settings: Settings | undefined }) => {
   if (!settings) return <div className="h-[420px] flex items-center justify-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">Caricamento anteprima...</div>;
-  return (
-    <PDFViewer style={{ width: '100%', height: 420 }}>
-      <QuotePDF quote={quote} settings={settings} />
-    </PDFViewer>
-  );
+  return <PDFPreviewInner quote={quote} settings={settings} />;
 }, (prevProps, nextProps) => {
   return prevProps.quote === nextProps.quote && prevProps.settings === nextProps.settings;
 });
@@ -454,10 +520,43 @@ export const NewQuote: React.FC = () => {
     }
   };
 
-  const toBase64 = (file: File) =>
+  const toBase64 = (file: File, maxWidth = 1024) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Use JPEG for better compression unless it's PNG (to keep transparency if needed, though usually transparency is only for signatures)
+            // For general attachments, JPEG is preferred for size.
+            // But let's respect the original type but use 0.8 quality.
+            // Actually, for 'image/png', quality arg is ignored by spec.
+            resolve(canvas.toDataURL(file.type, 0.8)); 
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
@@ -834,9 +933,14 @@ export const NewQuote: React.FC = () => {
                   onChange={async (e) => {
                     if (e.target.files && e.target.files[0]) {
                       const file = e.target.files[0];
-                      const reader = new FileReader();
-                      reader.onload = () => setValue('adminSignature', reader.result as string, { shouldDirty: true });
-                      reader.readAsDataURL(file);
+                      try {
+                        // Resize signature to max 500px to keep it light
+                        const dataUrl = await toBase64(file, 500);
+                        setValue('adminSignature', dataUrl, { shouldDirty: true });
+                      } catch (err) {
+                        console.error('Error processing signature:', err);
+                        alert('Errore nel caricamento della firma');
+                      }
                     }
                   }}
                   className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"

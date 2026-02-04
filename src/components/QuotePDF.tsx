@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   },
   table: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   tableHeader: {
     flexDirection: 'row',
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   totalsSection: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 10,
+    marginTop: 5,
   },
   totalsBox: {
     width: '40%',
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   },
   // Leasing Styles
   leasingContainer: {
-    marginTop: 20,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 6,
@@ -568,7 +568,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         ))}
       </View>
 
-      <View>
+      <View wrap={false}>
       {/* Totals */}
       {quote.showTotals !== false && (
         <View style={styles.totalsSection} wrap={false}>

@@ -39,33 +39,79 @@ export const SettingsPage: React.FC = () => {
     }
   }, [settings, reset]);
 
-  const toBase64 = (file: File) =>
+  const toBase64 = (file: File, maxWidth = 1024) =>
     new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxWidth || height > maxWidth) {
+            if (width > height) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            } else {
+              width = Math.round((width * maxWidth) / height);
+              height = maxWidth;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL(file.type, 0.8));
+          } else {
+            resolve(e.target?.result as string);
+          }
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
       reader.onerror = reject;
       reader.readAsDataURL(file);
     });
 
   const onLogoFileChange = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await toBase64(file);
-    setValue('logoData', dataUrl, { shouldDirty: true });
+    try {
+      const dataUrl = await toBase64(file, 500);
+      setValue('logoData', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      console.error('Error processing logo:', err);
+      alert('Errore nel caricamento del logo');
+    }
   };
   const onDefaultHardwareChange = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await toBase64(file);
-    setValue('defaultHardwareImage', dataUrl, { shouldDirty: true });
+    try {
+      const dataUrl = await toBase64(file);
+      setValue('defaultHardwareImage', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      console.error('Error processing hardware image:', err);
+    }
   };
   const onDefaultSoftwareChange = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await toBase64(file);
-    setValue('defaultSoftwareImage', dataUrl, { shouldDirty: true });
+    try {
+      const dataUrl = await toBase64(file);
+      setValue('defaultSoftwareImage', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      console.error('Error processing software image:', err);
+    }
   };
   const onDefaultTargetChange = async (file?: File) => {
     if (!file) return;
-    const dataUrl = await toBase64(file);
-    setValue('defaultTargetImage', dataUrl, { shouldDirty: true });
+    try {
+      const dataUrl = await toBase64(file);
+      setValue('defaultTargetImage', dataUrl, { shouldDirty: true });
+    } catch (err) {
+      console.error('Error processing target image:', err);
+    }
   };
 
   const onSubmit = async (data: Settings) => {

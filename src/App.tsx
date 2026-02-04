@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Dashboard } from './pages/Dashboard';
 import { Articles } from './pages/Articles';
@@ -10,39 +10,71 @@ import { Login } from './pages/Login';
 import { Users } from './pages/Users';
 import { getCurrentUserId } from './db';
 
-const RequireAuth = ({ children }: { children: React.ReactNode }) => {
+const RequireAuth = () => {
   const uid = getCurrentUserId();
   if (!uid) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
 };
 
+const router = createBrowserRouter([
+  {
+    path: "/login",
+    element: <Login />
+  },
+  {
+    path: "/",
+    element: <RequireAuth />,
+    children: [
+      {
+        path: "/",
+        element: <Dashboard />
+      },
+      {
+        path: "articles",
+        element: <Articles />
+      },
+      {
+        path: "customers",
+        element: <Customers />
+      },
+      {
+        path: "quotes",
+        element: <Quotes />
+      },
+      {
+        path: "quotes/new",
+        element: <NewQuote />
+      },
+      {
+        path: "quotes/:id/edit",
+        element: <NewQuote />
+      },
+      {
+        path: "settings",
+        element: <SettingsPage />
+      },
+      {
+        path: "users",
+        element: <Users />
+      }
+    ]
+  }
+], {
+  future: {
+    v7_relativeSplatPath: true,
+    v7_fetcherPersist: true,
+    v7_normalizeFormMethod: true,
+    v7_partialHydration: true,
+    v7_skipActionErrorRevalidation: true,
+  }
+});
+
 function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/*"
-          element={
-            <RequireAuth>
-              <Layout>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/articles" element={<Articles />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/quotes" element={<Quotes />} />
-                  <Route path="/quotes/new" element={<NewQuote />} />
-                  <Route path="/quotes/:id/edit" element={<NewQuote />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/users" element={<Users />} />
-                </Routes>
-              </Layout>
-            </RequireAuth>
-          }
-        />
-      </Routes>
-    </Router>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

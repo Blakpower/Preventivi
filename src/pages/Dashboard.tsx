@@ -35,7 +35,7 @@ export const Dashboard: React.FC = () => {
 
       const { data: recentQuotesData, error: recentError } = await supabase
         .from('quotes')
-        .select('*')
+        .select('id, number, customerName, date, total, createdAt, ownerUserId')
         .eq('ownerUserId', uid)
         .order('createdAt', { ascending: false })
         .limit(5)
