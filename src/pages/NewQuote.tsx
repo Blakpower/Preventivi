@@ -9,7 +9,6 @@ import { QuotePDF } from '../components/QuotePDF';
 
 const PDFPreviewInner = ({ quote, settings }: { quote: Quote, settings: Settings }) => {
   const [url, setUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -17,7 +16,6 @@ const PDFPreviewInner = ({ quote, settings }: { quote: Quote, settings: Settings
     
     const generatePdf = async () => {
       try {
-        setLoading(true);
         setError(null);
         
         const doc = <QuotePDF quote={quote} settings={settings} />;
@@ -38,8 +36,6 @@ const PDFPreviewInner = ({ quote, settings }: { quote: Quote, settings: Settings
           console.error('PDF generation error:', err);
           setError(String(err));
         }
-      } finally {
-        if (active) setLoading(false);
       }
     };
 
