@@ -189,13 +189,16 @@ export const NewQuote: React.FC = () => {
   const lastSerialized = useRef<string>('');
   const [previewValues, setPreviewValues] = useState<Quote>(getValues());
   
+  // Track intentional navigation (save)
+  const isSaving = useRef(false);
+  
   // Exit Confirmation Logic
   const isDirty = Object.keys(errors).length > 0 || isFormDirty;
   
   useBeforeUnload(
     React.useCallback(
       (e) => {
-        if (isDirty) {
+        if (!isSaving.current && isDirty) {
           e.preventDefault();
           e.returnValue = '';
         }
@@ -206,7 +209,7 @@ export const NewQuote: React.FC = () => {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      isDirty && currentLocation.pathname !== nextLocation.pathname
+      !isSaving.current && isDirty && currentLocation.pathname !== nextLocation.pathname
   );
 
   const watchedFields = useWatch({
@@ -680,6 +683,7 @@ export const NewQuote: React.FC = () => {
   }, [setValue, id]);
 
   const onSubmit = async (data: Quote) => {
+    isSaving.current = true;
     try {
       if (!settings) return;
 
@@ -758,9 +762,11 @@ export const NewQuote: React.FC = () => {
       }
 
       // Reset form state to prevent unsaved changes warning
-      reset(data);
-      navigate('/quotes');
+      reset(data); 
+      // Ensure state updates before navigation
+      setTimeout(() => navigate('/quotes'), 0);
     } catch (error: any) {
+      isSaving.current = false;
       console.error('Error saving quote:', error);
       alert(`Errore durante il salvataggio del preventivo: ${error.message || JSON.stringify(error)}`);
     }

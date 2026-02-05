@@ -160,6 +160,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#333',
   },
+  descProdPage: {
+    paddingTop: 115, // Account for fixed header height
+    paddingLeft: 30,
+    paddingRight: 30,
+    paddingBottom: 60,
+    fontSize: 11,
+    color: '#333',
+  },
   contractPage: {
     padding: 40,
   },
@@ -267,8 +275,8 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
   const displayNumber = quote.number && String(quote.number).trim() ? quote.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
   const attachments = quote.attachments || [];
   const attachmentsBefore = (quote.attachmentsPosition || 'after') === 'before';
-  const renderHeader = () => (
-    <>
+  const renderHeader = (isFixed = false) => (
+    <View fixed={isFixed}>
       <View style={styles.header}>
         <View style={[styles.logoLeft, styles.logoLeftEdge]}>
           {(settings.logoData || settings.logoUrl) && (
@@ -290,7 +298,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         </View>
       </View>
       <View style={styles.separator} />
-    </>
+    </View>
   );
 
   const renderRecipient = () => (
@@ -484,69 +492,45 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {(() => {
       const imgs = (quote.descrizioneProdottiImages || []).filter(Boolean);
       const captions = quote.descrizioneProdottiCaptions || [];
-      const pages: React.ReactElement[] = [];
-      
       const scale = Number(quote.descrizioneProdottiFirstImageScale ?? 100) / 100;
       const CONTENT_WIDTH = 530;
+      // Safety cap to prevent infinite layout loops if image + title > page height
+      // Page height (842) - padding top (115) - padding bottom (60) = 667 available
+      // We reserve ~150px for titles/captions/margins/header-overlap-safety
+      const MAX_IMG_HEIGHT = 450; 
+      
       const imgWidth = Math.min(scale * CONTENT_WIDTH, CONTENT_WIDTH);
-      const imgHeight = Math.max(100, Math.round(300 * scale));
+      const rawImgHeight = Math.max(100, Math.round(300 * scale));
+      const imgHeight = Math.min(rawImgHeight, MAX_IMG_HEIGHT);
 
-      // Intro page with section title and first image
-          pages.push(
-            <Page key="desc-prod-intro" size="A4" style={styles.attachmentPage} id="descrizione">
-              {renderHeader()}
-              <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>
-              {imgs[0] && (
-                <View style={{ 
-                  width: '100%',
-                  alignItems: 'center',
-                  marginTop: 10 
-                }}>
-                  {captions[0] && (
-                    <Text style={[styles.attachmentText, { marginBottom: 10, fontWeight: 'bold' }]}>{captions[0]}</Text>
-                  )}
-                  <Image 
-                    style={{ 
-                      width: imgWidth,
-                      height: imgHeight,
-                      objectFit: 'contain' 
-                    }} 
-                    src={imgs[0]!} 
-                  />
-                </View>
-              )}
-              {renderFooter()}
-            </Page>
-          );
+      if (imgs.length === 0) {
+        return (
+          <Page key="desc-prod-empty" size="A4" style={styles.attachmentPage} id="descrizione">
+            {renderHeader()}
+            <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>
+            {renderFooter()}
+          </Page>
+        );
+      }
 
-          // Remaining images on separate pages, scaled exactly like the first one
-          imgs.slice(1).forEach((img, idx) => {
-            const realIdx = idx + 1;
-            pages.push(
-              <Page key={`desc-prod-${realIdx}`} size="A4" style={styles.attachmentPage}>
-                {renderHeader()}
-                <View style={{ 
-                  width: '100%',
-                  alignItems: 'center',
-                  marginTop: 20 
-                }}>
-                  {captions[realIdx] && (
-                    <Text style={[styles.attachmentText, { marginBottom: 10, fontWeight: 'bold' }]}>{captions[realIdx]}</Text>
-                  )}
-                  <Image 
-                    style={{ 
-                      width: imgWidth,
-                      height: imgHeight,
-                      objectFit: 'contain' 
-                    }} 
-                    src={img!} 
-                  />
-                </View>
-                {renderFooter()}
-              </Page>
-            );
-          });
-      return pages;
+      return (
+        <Page key="desc-prod-main" size="A4" style={styles.descProdPage} id="descrizione">
+          {renderHeader(true)}
+          {imgs.map((img, idx) => (
+            <View key={idx} style={{ width: '100%', alignItems: 'center', marginTop: idx === 0 ? 0 : 20 }} wrap={false}>
+               {idx === 0 && <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>}
+               {captions[idx] && (
+                 <Text style={[styles.attachmentText, { marginBottom: 5, fontWeight: 'bold' }]}>{captions[idx]}</Text>
+               )}
+               <Image 
+                 style={{ width: imgWidth, height: imgHeight, objectFit: 'contain' }} 
+                 src={img} 
+               />
+            </View>
+          ))}
+          {renderFooter()}
+        </Page>
+      );
     })()}
 
     {/* Economic Offer: main quote page */}
@@ -554,7 +538,6 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {renderHeader()}
       <Text style={styles.sectionTitle}>3. OFFERTA ECONOMICA</Text>
 
-      <View>
       {/* Items Table */}
       <View style={styles.table}>
         <View style={styles.tableHeader}>
@@ -575,160 +558,158 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
         ))}
       </View>
 
+      {/* Block 1: Totals and Leasing */}
       <View wrap={false}>
-      {/* Totals */}
-      {quote.showTotals !== false && (
-        <View style={styles.totalsSection} wrap={false}>
-          <View style={styles.totalsBox}>
-            <View style={styles.totalRow}>
-              <Text>Imponibile</Text>
-              <Text>€ {quote.subtotal.toFixed(2)}</Text>
+        {/* Totals */}
+        {quote.showTotals !== false && (
+            <View style={styles.totalsSection}>
+            <View style={styles.totalsBox}>
+                <View style={styles.totalRow}>
+                <Text>Imponibile</Text>
+                <Text>€ {quote.subtotal.toFixed(2)}</Text>
+                </View>
+                <View style={styles.totalRow}>
+                <Text>IVA</Text>
+                <Text>€ {quote.vatTotal.toFixed(2)}</Text>
+                </View>
+                <View style={styles.grandTotal}>
+                <Text>TOTALE</Text>
+                <Text>€ {quote.total.toFixed(2)}</Text>
+                </View>
             </View>
-            <View style={styles.totalRow}>
-              <Text>IVA</Text>
-              <Text>€ {quote.vatTotal.toFixed(2)}</Text>
             </View>
-            <View style={styles.grandTotal}>
-              <Text>TOTALE</Text>
-              <Text>€ {quote.total.toFixed(2)}</Text>
-            </View>
-          </View>
-        </View>
-      )}
+        )}
 
-      {/* Leasing Section */}
-      {quote.leasing && (
-        <View style={styles.leasingContainer} wrap={false}>
-          <View style={styles.leasingHeaderBox}>
-            <Text style={styles.leasingTitle}>
-              {quote.leasing.type === 'financing' ? 'PIANO FINANZIAMENTO' : 'PIANO LEASING'}
-            </Text>
-          </View>
-          <View style={styles.leasingBody}>
-            <View style={styles.leasingColumns}>
-              {/* Column 1 */}
-              <View style={styles.leasingCol}>
-                {/* 1) Parametri economici */}
-                <Text style={styles.leasingGroupTitle}>Parametri Economici</Text>
-                {quote.leasing.assetValue !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Importo Bene:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.assetValue).toFixed(2)}</Text>
-                  </View>
-                )}
-                {quote.leasing.vatAmount !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>IVA {quote.leasing.vatRate ? `(${quote.leasing.vatRate}%)` : ''}:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.vatAmount).toFixed(2)}</Text>
-                  </View>
-                )}
-                {quote.leasing.totalAssetValueVatIncl !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Totale IVA Incl.:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.totalAssetValueVatIncl).toFixed(2)}</Text>
-                  </View>
-                )}
-                {quote.leasing.initialDownPaymentValue !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Anticipo:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.initialDownPaymentValue).toFixed(2)}</Text>
-                  </View>
-                )}
-                {quote.leasing.netFinancedCapital !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Capitale Finanziato:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.netFinancedCapital).toFixed(2)}</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Column 2 */}
-              <View style={styles.leasingCol}>
-                {/* 2) Durata */}
-                <Text style={styles.leasingGroupTitle}>Durata e Canoni</Text>
-                {quote.leasing.durationMonths !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Durata:</Text>
-                    <Text style={styles.leasingValue}>{quote.leasing.durationMonths} Mesi</Text>
-                  </View>
-                )}
-                {quote.leasing.numberOfInstallments !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>N. Canoni:</Text>
-                    <Text style={styles.leasingValue}>{quote.leasing.numberOfInstallments}</Text>
-                  </View>
-                )}
-                {quote.leasing.installmentAmount !== undefined && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Canone Periodico:</Text>
-                    <Text style={styles.leasingValue}>€ {Number(quote.leasing.installmentAmount).toFixed(2)}</Text>
-                  </View>
-                )}
-                {quote.leasing.periodicity && (
-                  <View style={styles.leasingRow}>
-                    <Text style={styles.leasingLabel}>Periodicità:</Text>
-                    <Text style={styles.leasingValue}>
-                      {quote.leasing.periodicity === 'monthly' ? 'Mensile' : 'Trimestrale'}
-                    </Text>
-                  </View>
-                )}
-                {quote.leasing.startDate && (
+        {/* Leasing Section */}
+        {quote.leasing && (
+            <View style={styles.leasingContainer}>
+            <View style={styles.leasingHeaderBox}>
+                <Text style={styles.leasingTitle}>
+                {quote.leasing.type === 'financing' ? 'PIANO FINANZIAMENTO' : 'PIANO LEASING'}
+                </Text>
+            </View>
+            <View style={styles.leasingBody}>
+                <View style={styles.leasingColumns}>
+                {/* Column 1 */}
+                <View style={styles.leasingCol}>
+                    {/* 1) Parametri economici */}
+                    <Text style={styles.leasingGroupTitle}>Parametri Economici</Text>
+                    {quote.leasing.assetValue !== undefined && (
                     <View style={styles.leasingRow}>
-                        <Text style={styles.leasingLabel}>Decorrenza:</Text>
-                        <Text style={styles.leasingValue}>{format(new Date(quote.leasing.startDate), 'dd/MM/yyyy')}</Text>
+                        <Text style={styles.leasingLabel}>Importo Bene:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.assetValue).toFixed(2)}</Text>
                     </View>
-                )}
-              </View>
+                    )}
+                    {quote.leasing.vatAmount !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>IVA {quote.leasing.vatRate ? `(${quote.leasing.vatRate}%)` : ''}:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.vatAmount).toFixed(2)}</Text>
+                    </View>
+                    )}
+                    {quote.leasing.totalAssetValueVatIncl !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Totale IVA Incl.:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.totalAssetValueVatIncl).toFixed(2)}</Text>
+                    </View>
+                    )}
+                    {quote.leasing.initialDownPaymentValue !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Anticipo:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.initialDownPaymentValue).toFixed(2)}</Text>
+                    </View>
+                    )}
+                    {quote.leasing.netFinancedCapital !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Capitale Finanziato:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.netFinancedCapital).toFixed(2)}</Text>
+                    </View>
+                    )}
+                </View>
+
+                {/* Column 2 */}
+                <View style={styles.leasingCol}>
+                    {/* 2) Durata */}
+                    <Text style={styles.leasingGroupTitle}>Durata e Canoni</Text>
+                    {quote.leasing.durationMonths !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Durata:</Text>
+                        <Text style={styles.leasingValue}>{quote.leasing.durationMonths} Mesi</Text>
+                    </View>
+                    )}
+                    {quote.leasing.numberOfInstallments !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>N. Canoni:</Text>
+                        <Text style={styles.leasingValue}>{quote.leasing.numberOfInstallments}</Text>
+                    </View>
+                    )}
+                    {quote.leasing.installmentAmount !== undefined && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Canone Periodico:</Text>
+                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.installmentAmount).toFixed(2)}</Text>
+                    </View>
+                    )}
+                    {quote.leasing.periodicity && (
+                    <View style={styles.leasingRow}>
+                        <Text style={styles.leasingLabel}>Periodicità:</Text>
+                        <Text style={styles.leasingValue}>
+                        {quote.leasing.periodicity === 'monthly' ? 'Mensile' : 'Trimestrale'}
+                        </Text>
+                    </View>
+                    )}
+                    {quote.leasing.startDate && (
+                        <View style={styles.leasingRow}>
+                            <Text style={styles.leasingLabel}>Decorrenza:</Text>
+                            <Text style={styles.leasingValue}>{format(new Date(quote.leasing.startDate), 'dd/MM/yyyy')}</Text>
+                        </View>
+                    )}
+                </View>
+                </View>
             </View>
-          </View>
-        </View>
-      )}
-
-      </View>
+            </View>
+        )}
       </View>
 
-      {/* Bank Info - Moved to Header */}
+      {/* Block 2: Conditions, Date, Signatures */}
+      <View wrap={false} style={{ marginTop: 20 }}>
+        {/* Conditions inline */}
+        {(quote.conditionsList && quote.conditionsList.length > 0) && (
+            <View id="condizioni" style={{ marginBottom: 16 }}>
+            <Text style={styles.sectionTitle}>4. CONDIZIONI DI FORNITURA</Text>
+            <View>
+                {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (
+                <View key={`cond-inline-${idx}`} style={{ flexDirection: 'row', marginBottom: 6 }}>
+                    <Text style={{ marginRight: 6 }}>•</Text>
+                    <Text style={styles.attachmentText}>{cond}</Text>
+                </View>
+                ))}
+            </View>
+            </View>
+        )}
 
-      {/* Conditions inline below economic offer */}
-      {(quote.conditionsList && quote.conditionsList.length > 0) && (
-        <View style={{ marginTop: 16 }} id="condizioni" wrap={false}>
-          <Text style={styles.sectionTitle}>4. CONDIZIONI DI FORNITURA</Text>
-          <View>
-            {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (
-              <View key={`cond-inline-${idx}`} style={{ flexDirection: 'row', marginBottom: 6 }}>
-                <Text style={{ marginRight: 6 }}>•</Text>
-                <Text style={styles.attachmentText}>{cond}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <View style={{ marginTop: 20 }} wrap={false}>
         <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
         
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
-          {/* Left: Admin Signature */}
-          <View style={{ alignItems: 'flex-start' }}>
+            {/* Left: Admin Signature */}
+            <View style={{ alignItems: 'flex-start' }}>
             <Text style={{ fontSize: 11, marginBottom: quote.adminSignature ? 5 : 50 }}>L'Amministratore</Text>
             {quote.adminSignature ? (
-              <Image 
+                <Image 
                 src={quote.adminSignature} 
                 style={{ 
-                  width: 150 * ((quote.adminSignatureScale || 100) / 100),
-                  height: 'auto',
-                  marginBottom: 5
+                    width: 150 * ((quote.adminSignatureScale || 100) / 100),
+                    height: 'auto',
+                    marginBottom: 5
                 }} 
-              />
+                />
             ) : null}
             <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
-          </View>
+            </View>
 
-          {/* Right: Customer Signature */}
-          <View style={{ alignItems: 'flex-end' }}>
+            {/* Right: Customer Signature */}
+            <View style={{ alignItems: 'flex-end' }}>
             <Text style={{ fontSize: 11, marginBottom: 50 }}>Firma per accettazione</Text>
             <View style={{ width: 200, borderBottomWidth: 1, borderBottomColor: '#000' }} />
-          </View>
+            </View>
         </View>
       </View>
 

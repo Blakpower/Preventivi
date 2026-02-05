@@ -85,7 +85,7 @@ export const Quotes: React.FC = () => {
   }, [search]);
 
   const handleDelete = async (id: number) => {
-    if (confirm('Sei sicuro di voler eliminare questo preventivo?')) {
+    if (confirm('Sei sicuro di voler spostare questo preventivo nel Cestino? Potrai recuperarlo in seguito dalla sezione "Cestino".')) {
       // Soft delete: update deletedAt instead of removing the record
       const { error } = await supabase
         .from('quotes')
@@ -231,7 +231,7 @@ export const Quotes: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
+                    <div className="flex items-center justify-end space-x-2 opacity-100">
                       <button 
                         onClick={() => handleDownloadPDF(quote)}
                         className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
@@ -242,17 +242,19 @@ export const Quotes: React.FC = () => {
                       </button>
                       <Link
                         to={`/quotes/${quote.id}/edit`}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors"
                         title="Modifica"
                       >
-                        <Edit size={18} />
+                        <Edit size={16} />
+                        <span>Modifica</span>
                       </Link>
                       <button
                         onClick={() => quote.id && handleDelete(quote.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
                         title="Elimina"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
+                        <span>Elimina</span>
                       </button>
                     </div>
                   </td>
