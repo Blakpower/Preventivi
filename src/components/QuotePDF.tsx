@@ -5,7 +5,10 @@ import { type Quote, type Settings } from '../db';
 
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
+    paddingTop: 30,
+    paddingLeft: 30,
+    paddingRight: 30,
+    paddingBottom: 60,
     fontSize: 10,
     fontFamily: 'Helvetica',
     color: '#333',
@@ -150,7 +153,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   attachmentPage: {
-    padding: 30,
+    paddingTop: 30,
+    paddingLeft: 30,
+    paddingRight: 30,
+    paddingBottom: 60,
     fontSize: 11,
     color: '#333',
   },
@@ -685,7 +691,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
       {/* Conditions inline below economic offer */}
       {(quote.conditionsList && quote.conditionsList.length > 0) && (
-        <View style={{ marginTop: 16 }} id="condizioni">
+        <View style={{ marginTop: 16 }} id="condizioni" wrap={false}>
           <Text style={styles.sectionTitle}>4. CONDIZIONI DI FORNITURA</Text>
           <View>
             {(quote.conditionsList || []).filter(Boolean).map((cond, idx) => (

@@ -757,6 +757,8 @@ export const NewQuote: React.FC = () => {
           .eq('id', settings.id);
       }
 
+      // Reset form state to prevent unsaved changes warning
+      reset(data);
       navigate('/quotes');
     } catch (error: any) {
       console.error('Error saving quote:', error);
