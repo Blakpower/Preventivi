@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, type Quote, type Settings, getCurrentUserId } from '../db';
-import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit, Copy } from 'lucide-react';
+import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit, Copy, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
@@ -10,6 +10,7 @@ export const Quotes: React.FC = () => {
   const [search, setSearch] = useState('');
   const [settings, setSettings] = useState<Settings | undefined>(undefined);
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -42,9 +43,12 @@ export const Quotes: React.FC = () => {
       try {
         let query = supabase
           .from('quotes')
-          .select('id, number, date, customerName, total, createdAt, ownerUserId, deletedAt')
+          // Removed deletedAt from select and filter to avoid errors if migration hasn't run
+          // Uncomment when 'deletedAt' column is confirmed to exist
+          // .select('id, number, date, customerName, total, createdAt, ownerUserId, deletedAt')
+          .select('id, number, date, customerName, total, createdAt, ownerUserId')
           .eq('ownerUserId', uid)
-          .is('deletedAt', null)
+          // .is('deletedAt', null)
           .order('createdAt', { ascending: false })
           .abortSignal(controller.signal);
 
@@ -106,7 +110,14 @@ export const Quotes: React.FC = () => {
       alert('Impostazioni non caricate');
       return;
     }
+    if (downloadingId) return; // Prevent multiple downloads
+
     try {
+      setDownloadingId(quote.id!);
+      
+      // Allow UI to update
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Fetch full quote data on demand for PDF generation
       const { data: fullQuote, error } = await supabase
         .from('quotes')
@@ -120,11 +131,18 @@ export const Quotes: React.FC = () => {
         return;
       }
 
-      // Convert date string back to Date object if needed (Supabase returns strings)
+      // Convert date string back to Date object and ensure JSON fields are parsed
       const quoteWithDates = {
         ...fullQuote,
         date: new Date(fullQuote.date),
-        // Ensure other date fields are handled if they exist
+        items: typeof fullQuote.items === 'string' ? JSON.parse(fullQuote.items) : fullQuote.items || [],
+        attachments: typeof fullQuote.attachments === 'string' ? JSON.parse(fullQuote.attachments) : fullQuote.attachments || [],
+        premessaHardwareImages: typeof fullQuote.premessaHardwareImages === 'string' ? JSON.parse(fullQuote.premessaHardwareImages) : fullQuote.premessaHardwareImages || [],
+        softwareImages: typeof fullQuote.softwareImages === 'string' ? JSON.parse(fullQuote.softwareImages) : fullQuote.softwareImages || [],
+        targetAudienceImages: typeof fullQuote.targetAudienceImages === 'string' ? JSON.parse(fullQuote.targetAudienceImages) : fullQuote.targetAudienceImages || [],
+        descrizioneProdottiImages: typeof fullQuote.descrizioneProdottiImages === 'string' ? JSON.parse(fullQuote.descrizioneProdottiImages) : fullQuote.descrizioneProdottiImages || [],
+        conditionsList: typeof fullQuote.conditionsList === 'string' ? JSON.parse(fullQuote.conditionsList) : fullQuote.conditionsList || [],
+        leasing: fullQuote.leasing ? (typeof fullQuote.leasing === 'string' ? JSON.parse(fullQuote.leasing) : fullQuote.leasing) : undefined,
       };
 
       const blob = await pdf(<QuotePDF quote={quoteWithDates} settings={settings} />).toBlob();
@@ -139,6 +157,8 @@ export const Quotes: React.FC = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('Errore nella generazione del PDF');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -231,14 +251,23 @@ export const Quotes: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2 opacity-100">
-                      <button 
+                    <div className="flex flex-wrap gap-2">
+                      <button
                         onClick={() => handleDownloadPDF(quote)}
-                        className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        disabled={downloadingId === quote.id}
+                        className={`flex items-center space-x-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                          downloadingId === quote.id 
+                            ? 'text-slate-400 bg-slate-100 cursor-not-allowed' 
+                            : 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+                        }`}
                         title="Scarica PDF"
                       >
-                        <Download size={16} />
-                        <span>PDF</span>
+                        {downloadingId === quote.id ? (
+                          <Loader2 size={16} className="animate-spin" />
+                        ) : (
+                          <Download size={16} />
+                        )}
+                        <span>{downloadingId === quote.id ? '...' : 'PDF'}</span>
                       </button>
                       <Link
                         to={`/quotes/${quote.id}/edit`}

@@ -1,84 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams, useBeforeUnload, useBlocker, useSearchParams } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
-import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
-import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
+import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Coins, Package, AlertTriangle, ArrowUp, ArrowDown, FileText, X, Loader2, Download } from 'lucide-react';
+import { format } from 'date-fns';
 
-const PDFPreviewInner = ({ quote, settings }: { quote: Quote, settings: Settings }) => {
-  const [url, setUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    
-    const generatePdf = async () => {
-      try {
-        setError(null);
-        
-        const doc = <QuotePDF quote={quote} settings={settings} />;
-        const asPdf = pdf(doc);
-        const blob = await asPdf.toBlob();
-        
-        if (active) {
-          const newUrl = URL.createObjectURL(blob);
-          setUrl((prevUrl) => {
-            if (prevUrl) {
-              URL.revokeObjectURL(prevUrl);
-            }
-            return newUrl;
-          });
-        }
-      } catch (err) {
-        if (active) {
-          console.error('PDF generation error:', err);
-          setError(String(err));
-        }
-      }
-    };
-
-    // Use a small timeout to allow UI to update first (prevent freezing)
-    const t = setTimeout(generatePdf, 10);
-    
-    return () => {
-      active = false;
-      clearTimeout(t);
-    };
-  }, [quote, settings]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      setUrl((prevUrl) => {
-        if (prevUrl) URL.revokeObjectURL(prevUrl);
-        return null;
-      });
-    };
-  }, []);
-
-  if (error) return <div className="h-[420px] flex items-center justify-center text-red-500 bg-red-50 p-4 text-sm">Errore generazione PDF: {error}</div>;
-
-  if (!url) {
-    return <div className="h-[420px] flex items-center justify-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">Generazione anteprima...</div>;
-  }
-
-  return (
-    <iframe
-      src={url}
-      style={{ width: '100%', height: 420, border: 'none' }}
-      title="Anteprima PDF"
-    />
-  );
-};
-
-const MemoizedPDFPreview = React.memo(({ quote, settings }: { quote: Quote, settings: Settings | undefined }) => {
-  if (!settings) return <div className="h-[420px] flex items-center justify-center text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">Caricamento anteprima...</div>;
-  return <PDFPreviewInner quote={quote} settings={settings} />;
-}, (prevProps, nextProps) => {
-  return prevProps.quote === nextProps.quote && prevProps.settings === nextProps.settings;
-});
 import { LeasingForm } from '../components/LeasingForm';
 import { CustomerForm } from '../components/CustomerForm';
 import { ArticleForm } from '../components/ArticleForm';
@@ -94,6 +22,10 @@ export const NewQuote: React.FC = () => {
   const [showLeasing, setShowLeasing] = useState(false);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isArticleModalOpen, setIsArticleModalOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<Quote | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -152,7 +84,7 @@ export const NewQuote: React.FC = () => {
 
   const { register, control, handleSubmit, watch, setValue, getValues, reset, formState: { errors, isDirty: isFormDirty }, clearErrors } = useForm<Quote>({
     defaultValues: {
-      date: new Date(),
+      date: format(new Date(), 'yyyy-MM-dd'),
       items: [],
       attachments: [],
       attachmentsPosition: 'after',
@@ -187,11 +119,6 @@ export const NewQuote: React.FC = () => {
   // Optimize: Do not watch everything globally to prevent re-renders on every keystroke
   // const watchedValues = watch(); 
   
-  const [autoPreview, setAutoPreview] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const lastSerialized = useRef<string>('');
-  const [previewValues, setPreviewValues] = useState<Quote>(getValues());
-  
   // Track intentional navigation (save)
   const isSaving = useRef(false);
   
@@ -214,48 +141,6 @@ export const NewQuote: React.FC = () => {
     ({ currentLocation, nextLocation }) =>
       !isSaving.current && isDirty && currentLocation.pathname !== nextLocation.pathname
   );
-
-  const watchedFields = useWatch({
-    control,
-    name: [
-      'number','date','items','attachments',
-      'customerName','customerAddress','customerVat',
-      'tocTextAbove','tocText','premessaText','softwareText',
-      'descrizioneProdottiText','conditionsList','leasing','attachmentsPosition',
-      'showTotals', 'notes'
-    ],
-  });
-  useEffect(() => {
-    if (!autoPreview) return;
-    const t = setTimeout(() => {
-      const candidate = getValues();
-      const subset = {
-        number: candidate.number,
-        date: candidate.date,
-        items: candidate.items,
-        attachments: candidate.attachments,
-        customerName: candidate.customerName,
-        customerAddress: candidate.customerAddress,
-        customerVat: candidate.customerVat,
-        tocTextAbove: candidate.tocTextAbove,
-        tocText: candidate.tocText,
-        premessaText: candidate.premessaText,
-        softwareText: candidate.softwareText,
-        descrizioneProdottiText: candidate.descrizioneProdottiText,
-        conditionsList: candidate.conditionsList,
-        leasing: candidate.leasing,
-        attachmentsPosition: candidate.attachmentsPosition,
-        showTotals: candidate.showTotals,
-        notes: candidate.notes,
-      };
-      const serialized = JSON.stringify(subset);
-      if (serialized !== lastSerialized.current) {
-        setPreviewValues(candidate);
-        lastSerialized.current = serialized;
-      }
-    }, 500);
-    return () => clearTimeout(t);
-  }, [autoPreview, watchedFields]);
 
   const { fields, append, remove, move } = useFieldArray({
     control,
@@ -359,14 +244,24 @@ export const NewQuote: React.FC = () => {
             alert('Errore nel caricamento del preventivo: ' + error.message);
           } else if (data) {
             const quote = data as any; // Cast to any to handle JSON fields
-            const items = typeof quote.items === 'string' ? JSON.parse(quote.items) : quote.items;
-            const attachments = typeof quote.attachments === 'string' ? JSON.parse(quote.attachments) : quote.attachments;
-            const premessaHardwareImages = typeof quote.premessaHardwareImages === 'string' ? JSON.parse(quote.premessaHardwareImages) : quote.premessaHardwareImages;
-            const softwareImages = typeof quote.softwareImages === 'string' ? JSON.parse(quote.softwareImages) : quote.softwareImages;
-            const targetAudienceImages = typeof quote.targetAudienceImages === 'string' ? JSON.parse(quote.targetAudienceImages) : quote.targetAudienceImages;
-            const descrizioneProdottiImages = typeof quote.descrizioneProdottiImages === 'string' ? JSON.parse(quote.descrizioneProdottiImages) : quote.descrizioneProdottiImages;
-            const conditionsList = typeof quote.conditionsList === 'string' ? JSON.parse(quote.conditionsList) : quote.conditionsList;
-            const leasing = quote.leasing ? (typeof quote.leasing === 'string' ? JSON.parse(quote.leasing) : quote.leasing) : undefined;
+            
+            const safeParse = (val: any) => {
+              try {
+                return typeof val === 'string' ? JSON.parse(val) : val;
+              } catch (e) {
+                console.error('JSON parse error:', e);
+                return [];
+              }
+            };
+
+            const items = safeParse(quote.items);
+            const attachments = safeParse(quote.attachments);
+            const premessaHardwareImages = safeParse(quote.premessaHardwareImages);
+            const softwareImages = safeParse(quote.softwareImages);
+            const targetAudienceImages = safeParse(quote.targetAudienceImages);
+            const descrizioneProdottiImages = safeParse(quote.descrizioneProdottiImages);
+            const conditionsList = safeParse(quote.conditionsList);
+            const leasing = quote.leasing ? safeParse(quote.leasing) : undefined;
             
             if (leasing) {
               setShowLeasing(true);
@@ -379,7 +274,7 @@ export const NewQuote: React.FC = () => {
               ...quote,
               id: isDuplicate ? undefined : quote.id,
               number: isDuplicate ? currentNumber : quote.number,
-              date: isDuplicate ? new Date() : new Date(quote.date),
+              date: isDuplicate ? format(new Date(), 'yyyy-MM-dd') : format(new Date(quote.date), 'yyyy-MM-dd'),
               createdAt: isDuplicate ? undefined : quote.createdAt,
               items: items || [],
               attachments: attachments || [],
@@ -403,6 +298,9 @@ export const NewQuote: React.FC = () => {
   useEffect(() => {
     if (!id && settings && !getValues('number')) {
       setValue('number', `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`);
+      if (!getValues('date')) {
+        setValue('date', format(new Date(), 'yyyy-MM-dd'));
+      }
       if (settings.attachmentsDefaults?.position) {
         setValue('attachmentsPosition', settings.attachmentsDefaults.position);
       }
@@ -555,11 +453,8 @@ export const NewQuote: React.FC = () => {
           const ctx = canvas.getContext('2d');
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
-            // Use JPEG for better compression unless it's PNG (to keep transparency if needed, though usually transparency is only for signatures)
-            // For general attachments, JPEG is preferred for size.
-            // But let's respect the original type but use 0.8 quality.
-            // Actually, for 'image/png', quality arg is ignored by spec.
-            resolve(canvas.toDataURL(file.type, 0.8)); 
+            // Force JPEG for better performance and smaller size
+          resolve(canvas.toDataURL('image/jpeg', 0.7)); 
           } else {
             resolve(e.target?.result as string);
           }
@@ -577,8 +472,9 @@ export const NewQuote: React.FC = () => {
     setValue(`attachments.${index}.imageData`, dataUrl, { shouldDirty: true });
   };
 
-  const hwCount = watch('premessaHardwareImageCount') || 0;
+  const hwCount = Math.floor(Number(watch('premessaHardwareImageCount') || 0));
   useEffect(() => {
+    if (hwCount < 0 || isNaN(hwCount)) return;
     const current = getValues('premessaHardwareImages') || [];
     if (hwCount > current.length) {
       setValue('premessaHardwareImages', [
@@ -590,8 +486,9 @@ export const NewQuote: React.FC = () => {
     }
   }, [hwCount]);
 
-  const swCount = watch('softwareImageCount') || 0;
+  const swCount = Math.floor(Number(watch('softwareImageCount') || 0));
   useEffect(() => {
+    if (swCount < 0 || isNaN(swCount)) return;
     const current = getValues('softwareImages') || [];
     if (swCount > current.length) {
       setValue('softwareImages', [
@@ -603,8 +500,9 @@ export const NewQuote: React.FC = () => {
     }
   }, [swCount]);
 
-  const audCount = watch('targetAudienceImageCount') || 0;
+  const audCount = Math.floor(Number(watch('targetAudienceImageCount') || 0));
   useEffect(() => {
+    if (audCount < 0 || isNaN(audCount)) return;
     const current = getValues('targetAudienceImages') || [];
     if (audCount > current.length) {
       setValue('targetAudienceImages', [
@@ -691,6 +589,43 @@ export const NewQuote: React.FC = () => {
       }
     })();
   }, [setValue, id]);
+
+  const handleOpenPreview = async () => {
+    const values = getValues();
+    // Ensure all required fields for PDF are present
+    const quoteData: Quote = {
+      ...values,
+      id: Number(id) || 0,
+      ownerUserId: getCurrentUserId() || undefined,
+      leasing: showLeasing ? values.leasing : undefined
+    };
+    
+    if (!settings) return;
+
+    setPreviewData(quoteData);
+    setIsPreviewOpen(true);
+    setIsGeneratingPdf(true);
+    
+    try {
+      // Clean up previous URL if exists
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+
+      // Delay to ensure UI updates before heavy PDF generation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const blob = await pdf(<QuotePDF quote={quoteData} settings={settings} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error('Error generating PDF preview:', error);
+      alert('Errore durante la generazione dell\'anteprima PDF. Riprova.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const onSubmit = async (data: Quote) => {
     isSaving.current = true;
@@ -798,8 +733,16 @@ export const NewQuote: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-slate-900">{id ? 'Modifica Preventivo' : 'Nuovo Preventivo'}</h1>
             <p className="text-slate-500 mt-1">{id ? 'Modifica i dati del preventivo esistente.' : 'Compila i dati per creare un nuovo documento.'}</p>
-          </div>
         </div>
+      </div>
+      <div className="flex items-center space-x-3">
+        <button
+          onClick={handleOpenPreview}
+          className="bg-white text-slate-700 border border-slate-300 px-4 py-3 rounded-xl flex items-center space-x-2 hover:bg-slate-50 transition-all font-semibold shadow-sm"
+        >
+          <FileText size={20} />
+          <span>Anteprima PDF</span>
+        </button>
         <button
           onClick={handleSubmit(onSubmit)}
           className="bg-blue-600 text-white px-6 py-3 rounded-xl flex items-center space-x-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95 font-semibold"
@@ -808,6 +751,7 @@ export const NewQuote: React.FC = () => {
           <span>{id ? 'Aggiorna Preventivo' : 'Salva Preventivo'}</span>
         </button>
       </div>
+    </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -895,199 +839,12 @@ export const NewQuote: React.FC = () => {
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Data Emissione</label>
                   <input
                     type="date"
-                    {...register('date', { valueAsDate: true, required: true })}
+                    {...register('date', { required: true })}
                     className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors"
-                    defaultValue={format(new Date(), 'yyyy-MM-dd')}
                   />
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Right Column: Totals & Notes */}
-          <div className="space-y-8">
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 sticky top-8">
-              <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
-                  <Calculator size={20} />
-                </div>
-                <h2 className="text-lg font-bold text-slate-800">Riepilogo</h2>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between text-slate-600">
-                  <span>Imponibile</span>
-                  <span className="font-medium">€ {watch('subtotal')?.toFixed(2) || '0.00'}</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>IVA Totale</span>
-                  <span className="font-medium">€ {watch('vatTotal')?.toFixed(2) || '0.00'}</span>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
-                  <span className="text-lg font-bold text-slate-800">Totale</span>
-                  <span className="text-2xl font-bold text-blue-600">€ {watch('total')?.toFixed(2) || '0.00'}</span>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Note Aggiuntive</label>
-                <textarea
-                  {...register('notes')}
-                  className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors text-sm"
-                  rows={4}
-                  placeholder="Note visibili sul preventivo (es. validità offerta, tempi consegna...)"
-                />
-              </div>
-
-              {/* Admin Signature */}
-              <div className="mt-8 pt-6 border-t border-slate-100">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">L'Amministratore</label>
-                <input
-                  type="file"
-                  accept="image/png"
-                  onChange={async (e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const file = e.target.files[0];
-                      try {
-                        // Resize signature to max 500px to keep it light
-                        const dataUrl = await toBase64(file, 500);
-                        setValue('adminSignature', dataUrl, { shouldDirty: true });
-                      } catch (err) {
-                        console.error('Error processing signature:', err);
-                        alert('Errore nel caricamento della firma');
-                      }
-                    }
-                  }}
-                  className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"
-                />
-                {watch('adminSignature') && (
-                  <div className="space-y-2">
-                    <div className="relative border border-slate-200 rounded-lg p-2 bg-slate-50">
-                      <img 
-                        src={watch('adminSignature')} 
-                        alt="Firma" 
-                        className="h-16 object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setValue('adminSignature', undefined, { shouldDirty: true })}
-                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm text-slate-400 hover:text-red-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">
-                        Scala Firma: {watch('adminSignatureScale') || 100}%
-                      </label>
-                      <input
-                        type="range"
-                        min="50"
-                        max="200"
-                        step="5"
-                        defaultValue={100}
-                        {...register('adminSignatureScale', { valueAsNumber: true })}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {settings && (
-                <div className="mt-8">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-2">
-                      <Eye size={18} className="text-slate-500" />
-                      <span className="text-sm font-semibold text-slate-700">Anteprima PDF</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <label className="text-xs text-slate-600 flex items-center space-x-1 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={showPreview}
-                          onChange={(e) => setShowPreview(e.target.checked)}
-                          className="rounded"
-                        />
-                        <span className="font-medium">Attiva Anteprima</span>
-                      </label>
-
-                      {showPreview && (
-                        <>
-                          <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                          <label className="text-xs text-slate-600 flex items-center space-x-1">
-                            <input
-                              type="checkbox"
-                              checked={autoPreview}
-                              onChange={(e) => setAutoPreview(e.target.checked)}
-                              className="rounded"
-                            />
-                            <span>Auto</span>
-                          </label>
-                          {!autoPreview && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const candidate = getValues();
-                                const subset = {
-                                  number: candidate.number,
-                                  date: candidate.date,
-                                  items: candidate.items,
-                                  attachments: candidate.attachments,
-                                  customerName: candidate.customerName,
-                                  customerAddress: candidate.customerAddress,
-                                  customerVat: candidate.customerVat,
-                                  tocTextAbove: candidate.tocTextAbove,
-                                  tocText: candidate.tocText,
-                                  premessaText: candidate.premessaText,
-                                  softwareText: candidate.softwareText,
-                                  descrizioneProdottiText: candidate.descrizioneProdottiText,
-                                  conditionsList: candidate.conditionsList,
-                                  leasing: candidate.leasing,
-                                  attachmentsPosition: candidate.attachmentsPosition,
-                                  showTotals: candidate.showTotals,
-                                  notes: candidate.notes,
-                                  adminSignature: candidate.adminSignature,
-                                  adminSignatureScale: candidate.adminSignatureScale,
-                                };
-                                setPreviewValues(candidate);
-                                lastSerialized.current = JSON.stringify(subset);
-                              }}
-                              className="text-xs px-2 py-1 rounded-md border border-slate-200 hover:bg-slate-50"
-                            >
-                              Aggiorna ora
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  
-                  {showPreview && (
-                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
-                    <MemoizedPDFPreview
-                        quote={{
-                          ...previewValues,
-                          number: previewValues.number || '',
-                          date: previewValues.date || new Date(),
-                          createdAt: new Date(),
-                          items: previewValues.items || [],
-                          attachments: previewValues.attachments || [],
-                          softwareImageScale: Number(previewValues.softwareImageScale || 100),
-                          targetAudienceImageScale: Number(previewValues.targetAudienceImageScale || 100),
-                          descrizioneProdottiFirstImageScale: Number(previewValues.descrizioneProdottiFirstImageScale || 100),
-                          adminSignature: previewValues.adminSignature,
-                          adminSignatureScale: Number(previewValues.adminSignatureScale || 100),
-                        } as Quote}
-                        settings={settings}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Items Section (Full Width) */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -1259,7 +1016,7 @@ export const NewQuote: React.FC = () => {
           </div>
         </div>
         
-        {/* PDF{/* Leasing Section Toggle */}
+        {/* Leasing Section Toggle */}
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -1506,7 +1263,14 @@ export const NewQuote: React.FC = () => {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mt-8">
+             <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+                <div className="bg-purple-50 p-2 rounded-lg text-purple-600">
+                  <FileText size={20} />
+                </div>
+                <h2 className="text-lg font-bold text-slate-800">Allegati e Pagine Extra</h2>
+              </div>
+              <div className="space-y-6">
             {attachFields.map((field, index) => (
               <div key={field.id} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
                 <div>
@@ -1626,8 +1390,8 @@ export const NewQuote: React.FC = () => {
               <p className="text-sm text-slate-500">Nessun allegato. Aggiungi una pagina con foto e descrizione.</p>
             )}
           </div>
-          <div className="mt-4">
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Posizione allegati nel PDF</label>
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Posizione allegati nel PDF</label>
             <select
               {...register('attachmentsPosition' as const)}
               className="w-full md:w-64 rounded-lg border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 bg-white border"
@@ -1636,7 +1400,106 @@ export const NewQuote: React.FC = () => {
               <option value="before">Prima del preventivo</option>
             </select>
           </div>
+          </div>
         </div>
+        
+        {/* End Left Column */}
+      </div>
+
+      {/* Right Column: Totals & Notes */}
+      <div className="lg:col-span-1 space-y-8 sticky top-8 h-fit">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="bg-emerald-50 p-2 rounded-lg text-emerald-600">
+                <Calculator size={20} />
+              </div>
+              <h2 className="text-lg font-bold text-slate-800">Riepilogo</h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex justify-between text-slate-600">
+                <span>Imponibile</span>
+                <span className="font-medium">€ {watch('subtotal')?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>IVA Totale</span>
+                <span className="font-medium">€ {watch('vatTotal')?.toFixed(2) || '0.00'}</span>
+              </div>
+              <div className="pt-4 border-t border-slate-100 flex justify-between items-end">
+                <span className="text-lg font-bold text-slate-800">Totale</span>
+                <span className="text-2xl font-bold text-blue-600">€ {watch('total')?.toFixed(2) || '0.00'}</span>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">Note Aggiuntive</label>
+              <textarea
+                {...register('notes')}
+                className="block w-full rounded-xl border-slate-200 shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5 px-3 bg-slate-50 border transition-colors text-sm"
+                rows={4}
+                placeholder="Note visibili sul preventivo (es. validità offerta, tempi consegna...)"
+              />
+            </div>
+
+            {/* Admin Signature */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">L'Amministratore</label>
+              <input
+                type="file"
+                accept="image/png"
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    try {
+                      // Resize signature to max 500px to keep it light
+                      const dataUrl = await toBase64(file, 500);
+                      setValue('adminSignature', dataUrl, { shouldDirty: true });
+                    } catch (err) {
+                      console.error('Error processing signature:', err);
+                      alert('Errore nel caricamento della firma');
+                    }
+                  }
+                }}
+                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-2"
+              />
+              {watch('adminSignature') && (
+                <div className="space-y-2">
+                  <div className="relative border border-slate-200 rounded-lg p-2 bg-slate-50">
+                    <img 
+                      src={watch('adminSignature')} 
+                      alt="Firma" 
+                      className="h-16 object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setValue('adminSignature', undefined, { shouldDirty: true })}
+                      className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm text-slate-400 hover:text-red-500"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">
+                      Scala Firma: {watch('adminSignatureScale') || 100}%
+                    </label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="200"
+                      step="5"
+                      defaultValue={100}
+                      {...register('adminSignatureScale', { valueAsNumber: true })}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+      </div>
+      
+      {/* End Grid */}
+      </div>
       </form>
 
       {isCustomerModalOpen && (
@@ -1651,6 +1514,57 @@ export const NewQuote: React.FC = () => {
           onSubmit={handleCreateArticle}
           onCancel={() => setIsArticleModalOpen(false)}
         />
+      )}
+
+      {/* PDF Preview Modal */}
+      {isPreviewOpen && previewData && settings && (
+        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full h-full max-w-7xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <FileText size={20} className="text-blue-600" />
+                Anteprima Preventivo
+              </h3>
+              <div className="flex items-center gap-4">
+                {pdfUrl && !isGeneratingPdf && (
+                   <a 
+                     href={pdfUrl} 
+                     download={`Preventivo_${previewData.number || 'bozza'}.pdf`}
+                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                   >
+                     <Download size={18} />
+                     Scarica PDF
+                   </a>
+                )}
+                <button
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500 hover:text-red-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-slate-100 p-4 overflow-hidden relative">
+              {isGeneratingPdf ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-sm z-10">
+                  <Loader2 size={48} className="text-blue-600 animate-spin mb-4" />
+                  <p className="text-slate-600 font-medium text-lg">Generazione anteprima PDF in corso...</p>
+                  <p className="text-slate-400 text-sm mt-2">Attendere prego, potrebbe richiedere qualche secondo per preventivi con molte immagini.</p>
+                </div>
+              ) : pdfUrl ? (
+                <iframe 
+                  src={pdfUrl} 
+                  className="w-full h-full rounded-xl shadow-lg border border-slate-200 bg-white"
+                  title="PDF Preview"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-500">
+                  Impossibile caricare l'anteprima
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Exit Confirmation Modal */}

@@ -26,7 +26,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     paddingBottom: 10,
-    marginLeft: -20
+    marginLeft: -45,
+    marginRight: -20
   },
   logoLeft: {
     alignItems: 'flex-start',
@@ -60,7 +61,7 @@ const styles = StyleSheet.create({
     width: 350,
     height: 100,
     objectFit: 'contain',
-    marginLeft: 0,
+    marginLeft: -30,
     alignSelf: 'flex-start'
   },
   customerSection: {
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   descProdPage: {
-    paddingTop: 115, // Account for fixed header height
+    paddingTop: 130, // Account for fixed header height (increased for safety)
     paddingLeft: 30,
     paddingRight: 30,
     paddingBottom: 60,
@@ -271,35 +272,73 @@ interface QuotePDFProps {
 }
 
 export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
+  // Helper for safe numbers (ensures non-negative and finite)
+  const safeNumber = (val: any, def: number) => {
+    const n = Number(val);
+    return !Number.isFinite(n) || n < 0 ? def : n;
+  };
+
+  // Helper for safe positive numbers (strictly > 0)
+  const safePositive = (val: any, def: number) => {
+    const n = Number(val);
+    return !Number.isFinite(n) || n <= 0 ? def : n;
+  };
+
+  // Helper for safe dates
+  const safeFormatDate = (date: any, fmt: string) => {
+    try {
+      if (!date) return format(new Date(), fmt);
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return format(new Date(), fmt);
+      return format(d, fmt);
+    } catch (e) {
+      return format(new Date(), fmt);
+    }
+  };
+
+  // Helper to validate image source
+  const getValidImageSrc = (src: string | undefined | null) => {
+    if (!src) return undefined;
+    if (typeof src !== 'string') return undefined;
+    if (src.length === 0) return undefined;
+    // Basic check for base64 or url (including blob for local previews)
+    if (!src.startsWith('data:image') && !src.startsWith('http') && !src.startsWith('/') && !src.startsWith('blob:')) return undefined;
+    if (src === 'undefined' || src === 'null') return undefined;
+    return src;
+  };
+
   const contractPages = (settings.contractPagesText || '').split('---').map(p => p.trim()).filter(Boolean);
   const displayNumber = quote.number && String(quote.number).trim() ? quote.number : `${settings.quoteNumberPrefix}${settings.nextQuoteNumber}`;
-  const attachments = quote.attachments || [];
+  const attachments = Array.isArray(quote.attachments) ? quote.attachments : [];
   const attachmentsBefore = (quote.attachmentsPosition || 'after') === 'before';
-  const renderHeader = (isFixed = false) => (
+  const renderHeader = (isFixed = false) => {
+    const logoSrc = getValidImageSrc(settings.logoData) || getValidImageSrc(settings.logoUrl);
+    return (
     <View fixed={isFixed}>
       <View style={styles.header}>
-        <View style={[styles.logoLeft, styles.logoLeftEdge]}>
-          {(settings.logoData || settings.logoUrl) && (
-            <Image style={styles.logo} src={settings.logoData || settings.logoUrl!} />
+        <View style={styles.logoLeft}>
+          {logoSrc && (
+            <Image style={styles.logo} src={logoSrc} />
           )}
         </View>
         <View style={styles.companyInfo}>
           <Text style={styles.companyName}>{settings.companyName}</Text>
           <Text>{settings.companyAddress}</Text>
           <Text>P.IVA: {settings.companyVat}</Text>
-          <Text wrap={false}>{String(settings.companyEmail || '').replace(/\s*\n\s*/g, ' ')}</Text>
+          <Text>{String(settings.companyEmail || '').replace(/\s*\n\s*/g, ' ')}</Text>
           <Text>{settings.companyPhone}</Text>
           {settings.bankInfo && (
              <Text style={{ marginTop: 2 }}>{settings.bankInfo}</Text>
           )}
           <Text style={[styles.quoteMeta, { marginTop: 4 }]}>
-            N. {displayNumber} • Data: {quote.date instanceof Date && !isNaN(quote.date.getTime()) ? format(quote.date, 'dd/MM/yyyy') : ''}
+            N. {displayNumber} • Data: {safeFormatDate(quote.date, 'dd/MM/yyyy')}
           </Text>
         </View>
       </View>
       <View style={styles.separator} />
     </View>
-  );
+    );
+  };
 
   const renderRecipient = () => (
       <View style={styles.customerSection}>
@@ -321,22 +360,22 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
 
   return (
   <Document>
-    {attachmentsBefore && attachments.map(/* render each */ (att, idx) => {
+    {attachmentsBefore && attachments.map((att, idx) => {
       const layout = att.layout || {};
       const pos = layout.imagePosition || 'top';
-      const imgH = layout.imageHeight || 300;
-      const descSize = layout.descriptionFontSize || 11;
+      const imgH = safeNumber(layout.imageHeight, 300);
+      const descSize = safeNumber(layout.descriptionFontSize, 11);
       const descColor = layout.descriptionColor || '#333';
       const showTitle = layout.showTitle !== false;
-      const imageEl = att.imageData ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData} /> : null;
+      const imageEl = getValidImageSrc(att.imageData) ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData!} /> : null;
       const descEl = att.description ? <Text style={[styles.attachmentText, { fontSize: descSize, color: descColor }]}>{att.description}</Text> : null;
-      if (layout.fullPageImage && att.imageData) {
+      if (layout.fullPageImage && getValidImageSrc(att.imageData)) {
         return (
           <Page key={`att-top-${idx}`} size="A4" style={styles.fullImagePage}>
             {renderHeader()}
             {idx === 0 && <View style={{ paddingHorizontal: 30 }}>{renderRecipient()}</View>}
             <View style={styles.imageFillContainer}>
-              <Image style={styles.fullImage} src={att.imageData} />
+              <Image style={styles.fullImage} src={att.imageData!} />
             </View>
             {renderFooter()}
           </Page>
@@ -374,14 +413,17 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       {quote.tocTextAbove && (
         <Text style={{ fontSize: 11, color: '#4b5563', marginBottom: 12 }}>{quote.tocTextAbove}</Text>
       )}
-      <Text style={styles.sectionTitle}>INDICE</Text>
-      <View style={{ marginBottom: 10 }}>
+      {/* TOC / Index Content */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={styles.sectionTitle}>INDICE</Text>
         <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
           • <Link src="#premessa">1. PREMESSA</Link>
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
-          • <Link src="#descrizione">2. DESCRIZIONE PRODOTTI</Link>
-        </Text>
+        {(Array.isArray(quote.descrizioneProdottiImages) ? quote.descrizioneProdottiImages : []).filter(Boolean).length > 0 && (
+          <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
+            • <Link src="#descrizione">2. DESCRIZIONE PRODOTTI</Link>
+          </Text>
+        )}
         <Text style={{ fontSize: 12, fontWeight: 'bold', marginBottom: 2 }}>
           • <Link src="#offerta">3. OFFERTA ECONOMICA</Link>
         </Text>
@@ -394,24 +436,26 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       )}
 
       {/* Premessa Section (Merged) */}
-      <View style={{ marginTop: 20 }} id="premessa">
+      <View style={{ marginTop: 10 }} id="premessa">
         <Text style={styles.sectionTitle}>1. PREMESSA</Text>
         {quote.premessaText && <Text style={styles.attachmentText}>{quote.premessaText}</Text>}
-        <View style={{ marginTop: 12 }}>
+        <View style={{ marginTop: 10 }}>
           <Text style={[styles.sectionTitle, { textAlign: 'center' }]}>HARDWARE</Text>
           {(() => {
             // Usa esclusivamente l'immagine e lo scaler dalle impostazioni globali
-            const firstHw = settings.defaultHardwareImage;
-            const hwBaseHeight = Number(settings.defaultHardwareHeight ?? 380);
-            const hwScale = Number(settings.defaultHardwareScale ?? 100) / 100;
+            const firstHw = getValidImageSrc(settings.defaultHardwareImage);
+            const hwBaseHeight = safeNumber(settings.defaultHardwareHeight, 0);
+            const hwScale = safePositive(settings.defaultHardwareScale, 100) / 100;
             const CONTENT_WIDTH = 530;
+            const imgWidth = Math.min(hwScale * CONTENT_WIDTH, CONTENT_WIDTH);
             
-            return firstHw ? (
+            return firstHw && imgWidth > 0 ? (
               <View style={{ width: '100%', alignItems: 'center' }}>
                 <Image 
                   style={{ 
-                    width: Math.min(hwScale * CONTENT_WIDTH, CONTENT_WIDTH),
-                    height: hwBaseHeight * hwScale,
+                    width: imgWidth,
+                    height: hwBaseHeight ? hwBaseHeight * hwScale : undefined,
+                    maxHeight: 520,
                     objectFit: 'contain' 
                   }} 
                   src={firstHw} 
@@ -430,12 +474,14 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       
         <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 4 }]}>SOFTWARE</Text>
         {(() => {
-          const firstSw = (quote.softwareImages || []).filter(Boolean)[0] || settings.defaultSoftwareImage;
-          const swBaseHeight = Number(quote.softwareImageHeight ?? settings.defaultSoftwareHeight ?? 180);
-          const swScale = Number(quote.softwareImageScale ?? settings.defaultSoftwareScale ?? 100) / 100;
+          const softwareImages = Array.isArray(quote.softwareImages) ? quote.softwareImages : [];
+          const firstSw = getValidImageSrc(softwareImages.filter(Boolean)[0] || settings.defaultSoftwareImage);
+          const swBaseHeight = safeNumber(quote.softwareImageHeight ?? settings.defaultSoftwareHeight, 0);
+          const swScale = safePositive(quote.softwareImageScale ?? settings.defaultSoftwareScale, 100) / 100;
           const CONTENT_WIDTH = 530; // Safer max width than 100%
+          const imgWidth = Math.min(swScale * CONTENT_WIDTH, CONTENT_WIDTH);
           
-          return firstSw ? (
+          return firstSw && imgWidth > 0 ? (
             <View style={{ 
               width: '100%',
               alignItems: 'center',
@@ -444,8 +490,8 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
             }}>
               <Image 
                 style={{ 
-                  width: Math.min(swScale * CONTENT_WIDTH, CONTENT_WIDTH),
-                  height: swBaseHeight * swScale,
+                  width: imgWidth,
+                  height: swBaseHeight ? swBaseHeight * swScale : undefined,
                   objectFit: 'contain' 
                 }} 
                 src={firstSw} 
@@ -459,13 +505,15 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           </Text>
         </View>
         {(() => {
-          const firstAud = (quote.targetAudienceImages || []).filter(Boolean)[0] || settings.defaultTargetImage;
-          const audBaseHeight = Number(quote.targetAudienceImageHeight ?? settings.defaultTargetHeight ?? 180);
-          const audScale = Number(quote.targetAudienceImageScale ?? settings.defaultTargetScale ?? 100) / 100;
+          const targetAudienceImages = Array.isArray(quote.targetAudienceImages) ? quote.targetAudienceImages : [];
+          const firstAud = getValidImageSrc(targetAudienceImages.filter(Boolean)[0] || settings.defaultTargetImage);
+          const audBaseHeight = safeNumber(quote.targetAudienceImageHeight ?? settings.defaultTargetHeight, 0);
+          const audScale = safePositive(quote.targetAudienceImageScale ?? settings.defaultTargetScale, 100) / 100;
           const CONTENT_WIDTH = 530;
+          const imgWidth = Math.min(audScale * CONTENT_WIDTH, CONTENT_WIDTH);
 
-          return firstAud ? (
-            <View style={{ marginTop: 20 }}>
+          return firstAud && imgWidth > 0 ? (
+            <View style={{ marginTop: 10 }}>
               <Text style={[styles.sectionTitle, { textAlign: 'center', marginBottom: 0 }]}>A CHI CI RIVOLGIAMO</Text>
               <View style={{ 
                 width: '100%',
@@ -474,8 +522,9 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
               }}>
                 <Image 
                   style={{ 
-                    width: Math.min(audScale * CONTENT_WIDTH, CONTENT_WIDTH),
-                    height: audBaseHeight * audScale,
+                    width: imgWidth,
+                    height: audBaseHeight ? audBaseHeight * audScale : undefined,
+                    maxHeight: 520,
                     objectFit: 'contain' 
                   }} 
                   src={firstAud} 
@@ -489,49 +538,32 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     </Page>
 
     {/* Sezione 2 - Descrizione Prodotti */}
-    {(() => {
-      const imgs = (quote.descrizioneProdottiImages || []).filter(Boolean);
-      const captions = quote.descrizioneProdottiCaptions || [];
-      const scale = Number(quote.descrizioneProdottiFirstImageScale ?? 100) / 100;
+    {(Array.isArray(quote.descrizioneProdottiImages) ? quote.descrizioneProdottiImages : []).map(getValidImageSrc).filter(Boolean).map((img, idx) => {
+      const captions = Array.isArray(quote.descrizioneProdottiCaptions) ? quote.descrizioneProdottiCaptions : [];
+      const scale = safePositive(quote.descrizioneProdottiFirstImageScale, 100) / 100;
       const CONTENT_WIDTH = 530;
-      // Safety cap to prevent infinite layout loops if image + title > page height
-      // Page height (842) - padding top (115) - padding bottom (60) = 667 available
-      // We reserve ~150px for titles/captions/margins/header-overlap-safety
-      const MAX_IMG_HEIGHT = 450; 
-      
+      // Recalculate width for each image context if needed, but here we use the global scale setting
       const imgWidth = Math.min(scale * CONTENT_WIDTH, CONTENT_WIDTH);
-      const rawImgHeight = Math.max(100, Math.round(300 * scale));
-      const imgHeight = Math.min(rawImgHeight, MAX_IMG_HEIGHT);
-
-      if (imgs.length === 0) {
-        return (
-          <Page key="desc-prod-empty" size="A4" style={styles.attachmentPage} id="descrizione">
-            {renderHeader()}
-            <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>
-            {renderFooter()}
-          </Page>
-        );
-      }
+      
+      if (!img || imgWidth <= 0) return null;
 
       return (
-        <Page key="desc-prod-main" size="A4" style={styles.descProdPage} id="descrizione">
-          {renderHeader(true)}
-          {imgs.map((img, idx) => (
-            <View key={idx} style={{ width: '100%', alignItems: 'center', marginTop: idx === 0 ? 0 : 20 }} wrap={false}>
-               {idx === 0 && <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>}
-               {captions[idx] && (
-                 <Text style={[styles.attachmentText, { marginBottom: 5, fontWeight: 'bold' }]}>{captions[idx]}</Text>
-               )}
-               <Image 
-                 style={{ width: imgWidth, height: imgHeight, objectFit: 'contain' }} 
-                 src={img} 
-               />
-            </View>
-          ))}
+        <Page key={`desc-prod-${idx}`} size="A4" style={styles.attachmentPage} id={idx === 0 ? "descrizione" : undefined}>
+          {renderHeader(false)}
+          <View style={{ width: '100%', alignItems: 'center' }}>
+             {idx === 0 && <Text style={styles.sectionTitle}>2. DESCRIZIONE PRODOTTI</Text>}
+             {captions[idx] && (
+               <Text style={[styles.attachmentText, { marginBottom: 5, fontWeight: 'bold' }]}>{captions[idx]}</Text>
+             )}
+             <Image 
+               style={{ width: imgWidth, maxHeight: 520, objectFit: 'contain' }} 
+               src={img} 
+             />
+          </View>
           {renderFooter()}
         </Page>
       );
-    })()}
+    })}
 
     {/* Economic Offer: main quote page */}
     <Page size="A4" style={styles.page} id="offerta">
@@ -547,34 +579,34 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
           <Text style={styles.colPrice}>PREZZO</Text>
           <Text style={styles.colTotal}>TOTALE</Text>
         </View>
-        {quote.items.map((item, index) => (
+        {(Array.isArray(quote.items) ? quote.items : []).map((item, index) => (
           <View style={styles.tableRow} key={index}>
-            <Text style={styles.colCode}>{item.code}</Text>
-            <Text style={styles.colDesc}>{item.description}</Text>
-            <Text style={styles.colQty}>{item.quantity}</Text>
-            <Text style={styles.colPrice}>€ {item.unitPrice.toFixed(2)}</Text>
-            <Text style={styles.colTotal}>€ {item.total.toFixed(2)}</Text>
+            <Text style={styles.colCode}>{item.code || ''}</Text>
+            <Text style={styles.colDesc}>{item.description || ''}</Text>
+            <Text style={styles.colQty}>{item.quantity || 0}</Text>
+            <Text style={styles.colPrice}>€ {safeNumber(item.unitPrice, 0).toFixed(2)}</Text>
+            <Text style={styles.colTotal}>€ {safeNumber(item.total, 0).toFixed(2)}</Text>
           </View>
         ))}
       </View>
 
       {/* Block 1: Totals and Leasing */}
-      <View wrap={false}>
+      <View>
         {/* Totals */}
         {quote.showTotals !== false && (
             <View style={styles.totalsSection}>
             <View style={styles.totalsBox}>
                 <View style={styles.totalRow}>
                 <Text>Imponibile</Text>
-                <Text>€ {quote.subtotal.toFixed(2)}</Text>
+                <Text>€ {safeNumber(quote.subtotal, 0).toFixed(2)}</Text>
                 </View>
                 <View style={styles.totalRow}>
                 <Text>IVA</Text>
-                <Text>€ {quote.vatTotal.toFixed(2)}</Text>
+                <Text>€ {safeNumber(quote.vatTotal, 0).toFixed(2)}</Text>
                 </View>
                 <View style={styles.grandTotal}>
                 <Text>TOTALE</Text>
-                <Text>€ {quote.total.toFixed(2)}</Text>
+                <Text>€ {safeNumber(quote.total, 0).toFixed(2)}</Text>
                 </View>
             </View>
             </View>
@@ -597,31 +629,31 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
                     {quote.leasing.assetValue !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>Importo Bene:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.assetValue).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.assetValue, 0).toFixed(2)}</Text>
                     </View>
                     )}
                     {quote.leasing.vatAmount !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>IVA {quote.leasing.vatRate ? `(${quote.leasing.vatRate}%)` : ''}:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.vatAmount).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.vatAmount, 0).toFixed(2)}</Text>
                     </View>
                     )}
                     {quote.leasing.totalAssetValueVatIncl !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>Totale IVA Incl.:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.totalAssetValueVatIncl).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.totalAssetValueVatIncl, 0).toFixed(2)}</Text>
                     </View>
                     )}
                     {quote.leasing.initialDownPaymentValue !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>Anticipo:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.initialDownPaymentValue).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.initialDownPaymentValue, 0).toFixed(2)}</Text>
                     </View>
                     )}
                     {quote.leasing.netFinancedCapital !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>Capitale Finanziato:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.netFinancedCapital).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.netFinancedCapital, 0).toFixed(2)}</Text>
                     </View>
                     )}
                 </View>
@@ -645,7 +677,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
                     {quote.leasing.installmentAmount !== undefined && (
                     <View style={styles.leasingRow}>
                         <Text style={styles.leasingLabel}>Canone Periodico:</Text>
-                        <Text style={styles.leasingValue}>€ {Number(quote.leasing.installmentAmount).toFixed(2)}</Text>
+                        <Text style={styles.leasingValue}>€ {safeNumber(quote.leasing.installmentAmount, 0).toFixed(2)}</Text>
                     </View>
                     )}
                     {quote.leasing.periodicity && (
@@ -659,7 +691,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
                     {quote.leasing.startDate && (
                         <View style={styles.leasingRow}>
                             <Text style={styles.leasingLabel}>Decorrenza:</Text>
-                            <Text style={styles.leasingValue}>{format(new Date(quote.leasing.startDate), 'dd/MM/yyyy')}</Text>
+                            <Text style={styles.leasingValue}>{safeFormatDate(quote.leasing.startDate, 'dd/MM/yyyy')}</Text>
                         </View>
                     )}
                 </View>
@@ -670,7 +702,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
       </View>
 
       {/* Block 2: Conditions, Date, Signatures */}
-      <View wrap={false} style={{ marginTop: 20 }}>
+      <View style={{ marginTop: 20 }}>
         {/* Conditions inline */}
         {(quote.conditionsList && quote.conditionsList.length > 0) && (
             <View id="condizioni" style={{ marginBottom: 16 }}>
@@ -686,7 +718,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
             </View>
         )}
 
-        <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {format(quote.date, 'dd/MM/yyyy')}</Text>
+        <Text style={{ fontSize: 11 }}>San Giovanni la Punta, {safeFormatDate(quote.date, 'dd/MM/yyyy')}</Text>
         
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 }}>
             {/* Left: Admin Signature */}
@@ -696,8 +728,7 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
                 <Image 
                 src={quote.adminSignature} 
                 style={{ 
-                    width: 150 * ((quote.adminSignatureScale || 100) / 100),
-                    height: 'auto',
+                    width: 150 * (safeNumber(quote.adminSignatureScale, 100) / 100),
                     marginBottom: 5
                 }} 
                 />
@@ -722,20 +753,20 @@ export const QuotePDF: React.FC<QuotePDFProps> = ({ quote, settings }) => {
     {!attachmentsBefore && attachments.map((att, idx) => {
       const layout = att.layout || {};
       const pos = layout.imagePosition || 'top';
-      const imgH = layout.imageHeight || 300;
-      const descSize = layout.descriptionFontSize || 11;
+      const imgH = safeNumber(layout.imageHeight, 300);
+      const descSize = safeNumber(layout.descriptionFontSize, 11);
       const descColor = layout.descriptionColor || '#333';
       const showTitle = layout.showTitle !== false;
 
-      const imageEl = att.imageData ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData} /> : null;
+      const imageEl = getValidImageSrc(att.imageData) ? <Image style={[styles.attachmentImage, { height: imgH }]} src={att.imageData!} /> : null;
       const descEl = att.description ? <Text style={[styles.attachmentText, { fontSize: descSize, color: descColor }]}>{att.description}</Text> : null;
 
-      if (layout.fullPageImage && att.imageData) {
+      if (layout.fullPageImage && getValidImageSrc(att.imageData)) {
         return (
           <Page key={`att-${idx}`} size="A4" style={styles.fullImagePage}>
             {renderHeader()}
             <View style={styles.imageFillContainer}>
-              <Image style={styles.fullImage} src={att.imageData} />
+              <Image style={styles.fullImage} src={att.imageData!} />
             </View>
           </Page>
         );

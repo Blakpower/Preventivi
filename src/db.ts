@@ -58,7 +58,7 @@ export interface QuoteAttachment {
 export interface Quote {
   id?: number;
   number: string;
-  date: Date;
+  date: Date | string;
   customerName: string;
   customerAddress: string;
   customerVat: string;
@@ -92,7 +92,7 @@ export interface Quote {
   vatTotal: number;
   total: number;
   notes: string;
-  createdAt: Date;
+  createdAt: Date | string;
   ownerUserId?: number;
   attachmentsPosition?: 'before' | 'after';
   customerId?: number;
