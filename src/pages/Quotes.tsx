@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, type Quote, type Settings, getCurrentUserId } from '../db';
-import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit } from 'lucide-react';
+import { Plus, Search, Trash2, Download, FileText, Calendar, User, Edit, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../components/QuotePDF';
@@ -247,6 +247,14 @@ export const Quotes: React.FC = () => {
                       >
                         <Edit size={16} />
                         <span>Modifica</span>
+                      </Link>
+                      <Link
+                        to={`/quotes/new?from=${quote.id}`}
+                        className="flex items-center space-x-1 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                        title="Duplica"
+                      >
+                        <Copy size={16} />
+                        <span>Duplica</span>
                       </Link>
                       <button
                         onClick={() => quote.id && handleDelete(quote.id)}

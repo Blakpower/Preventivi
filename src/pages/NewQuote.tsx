@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { useNavigate, useParams, useBeforeUnload, useBlocker } from 'react-router-dom';
+import { useNavigate, useParams, useBeforeUnload, useBlocker, useSearchParams } from 'react-router-dom';
 import { supabase, type Quote, type Settings, type Article, type Customer, getCurrentUserId } from '../db';
 import { Plus, Trash2, Save, ArrowLeft, Calculator, User, Calendar, Eye, Coins, Package, AlertTriangle, ArrowUp, ArrowDown } from 'lucide-react';
 import { format } from 'date-fns';
@@ -85,6 +85,8 @@ import { ArticleForm } from '../components/ArticleForm';
 
 export const NewQuote: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const fromId = searchParams.get('from');
   const navigate = useNavigate();
   const [settings, setSettings] = useState<Settings | undefined>(undefined);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -120,6 +122,7 @@ export const NewQuote: React.FC = () => {
           .from('articles')
           .select('*')
           .eq('ownerUserId', uid)
+          .order('description', { ascending: true })
           .abortSignal(controller.signal);
         if (articlesData) setArticles(articlesData);
       } catch (e) {
@@ -340,13 +343,14 @@ export const NewQuote: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       const uid = getCurrentUserId();
+      const targetId = id || fromId;
       
-      // If editing, load the quote
-      if (id && uid) {
+      // If editing or duplicating, load the quote
+      if (targetId && uid) {
         const { data, error } = await supabase
           .from('quotes')
           .select('*')
-          .eq('id', Number(id)) // Ensure number
+          .eq('id', Number(targetId)) // Ensure number
           .eq('ownerUserId', uid) // Ensure we only get our own quote
           .maybeSingle();
 
@@ -368,9 +372,15 @@ export const NewQuote: React.FC = () => {
               setShowLeasing(true);
             }
 
+            const isDuplicate = !!fromId;
+            const currentNumber = getValues('number');
+
             reset({
               ...quote,
-              date: new Date(quote.date),
+              id: isDuplicate ? undefined : quote.id,
+              number: isDuplicate ? currentNumber : quote.number,
+              date: isDuplicate ? new Date() : new Date(quote.date),
+              createdAt: isDuplicate ? undefined : quote.createdAt,
               items: items || [],
               attachments: attachments || [],
               premessaHardwareImages: premessaHardwareImages || [],
@@ -388,7 +398,7 @@ export const NewQuote: React.FC = () => {
       }
     };
     loadData();
-  }, [id, reset, navigate]);
+  }, [id, fromId, reset, navigate]);
 
   useEffect(() => {
     if (!id && settings && !getValues('number')) {
