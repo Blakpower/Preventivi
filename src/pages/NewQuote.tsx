@@ -632,6 +632,10 @@ export const NewQuote: React.FC = () => {
     try {
       if (!settings) return;
 
+      if (!showLeasing) {
+        data.leasing = undefined;
+      }
+
       const uid = getCurrentUserId();
       if (!uid) {
         alert('Utente non autenticato');
@@ -646,6 +650,10 @@ export const NewQuote: React.FC = () => {
         ...data,
         ownerUserId: uid,
       };
+
+      if (!showLeasing) {
+        payload.leasing = null;
+      }
       
       // Remove id from payload if it exists
       delete payload.id;
